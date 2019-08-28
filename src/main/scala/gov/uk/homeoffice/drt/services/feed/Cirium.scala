@@ -57,19 +57,6 @@ object Cirium {
       .singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
-  def idToDateTime(id: String) = Try {
-
-    val dateFields = id.split("/").take(7).map(_.toInt)
-    new DateTime(
-      dateFields(0),
-      dateFields(1),
-      dateFields(2),
-      dateFields(3),
-      dateFields(4),
-      dateFields(5),
-      dateFields(6))
-  }
-
   case object Ask
 
   class CiriumLastItemActor extends Actor with ActorLogging {
@@ -91,16 +78,16 @@ object Cirium {
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(goBackHops: Int = 0) = {
+    def start(goBackHops: Int = 0, step: Int = 1000) = {
       val startingPoint = client
         .initialRequest()
-        .map(crp => goBack(crp.item, goBackHops))
+        .map(crp => goBack(crp.item, goBackHops, step))
         .flatten
 
-      tick(startingPoint)
+      tick(startingPoint, step)
     }
 
-    def tick(start: Future[String]): Future[Source[CiriumFlightStatus, Cancellable]] = {
+    def tick(start: Future[String], step: Int): Future[Source[CiriumFlightStatus, Cancellable]] = {
 
       start.map(s => askableLatestItemActor ? s).map { _ =>
         val tickingSource: Source[CiriumFlightStatus, Cancellable] = Source
@@ -116,9 +103,9 @@ object Cirium {
             case Some(s) => s
           }
           .mapAsync(1)(s => {
-            println("About to request another 500")
-            client.forwards(s, 500).flatMap(r => {
-              println(s"starting another 500 ${r.request.itemId}")
+            println(s"About to request another $step")
+            client.forwards(s, step).flatMap(r => {
+              println(s"starting another $step ${r.request.itemId}")
               (askableLatestItemActor ? r.items.head).map(_ => r.items)
             })
           })
