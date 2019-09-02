@@ -5,7 +5,7 @@ import akka.http.scaladsl.model._
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{TestKit, TestProbe}
+import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import gov.uk.homeoffice.drt.services.entities._
 import gov.uk.homeoffice.drt.services.feed.Cirium
@@ -13,7 +13,7 @@ import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
   sequential
@@ -69,7 +69,6 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
     result === expected
   }
-
 
   "I should be able to parse a flight status response" >> {
 

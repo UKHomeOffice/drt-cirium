@@ -1,19 +1,19 @@
 package gov.uk.homeoffice.drt
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model._
-import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{TestKit, TestProbe}
+import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
+import gov.uk.homeoffice.drt.actors.CiriumFlightStatusRouterActor
 import gov.uk.homeoffice.drt.services.entities._
 import gov.uk.homeoffice.drt.services.feed.Cirium
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
 class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
   sequential
@@ -24,7 +24,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val itemUriRegEx = "https://item/(\\d).+".r
 
     def sendReceive(endpoint: Uri): Future[HttpResponse] = {
-      println(endpoint)
 
       val res = endpoint.toString() match {
         case "https://latest?appId=&appKey=" =>
@@ -35,16 +34,15 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward1)))
         case "https://item/3/next/2?appId=&appKey=" =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2)))
+        case "https://item/5/next/2?appId=&appKey=" =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse)))
         case itemUriRegEx(itemId) =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponse(s"XX$itemId", itemId))))
       }
 
-      res.map(r => println(s"Res: $r"))
-
       res
     }
   }
-
 
   "Given a stream of messages, each should end up in the correct port" >> {
 
@@ -54,16 +52,22 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
     implicit val mat: ActorMaterializer = ActorMaterializer()
 
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
+
     val result = feed.start(1, 2).map { source =>
-      source.runWith(Sink.seq).pipeTo(probe.ref)
+      source.runWith(Sink.actorRef(flightStatusActor, "complete"))
     }
 
-    probe.fishForMessage(10 minutes) {
-      case x =>
-        println(s"Res is $x")
+    probe.fishForMessage(3 seconds) {
+      case s: CiriumFlightStatus if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX5" =>
+        true
+      case s: CiriumFlightStatus =>
+        println(s"Got this ${s.carrierFsCode}, ${s.arrivalAirportFsCode}")
         false
     }
-    true
+
+    success
   }
 
   val initialResponse: String =
@@ -143,98 +147,116 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |}
     """.stripMargin
 
-  def flightStatusResponse(carrierCode: String, item: String) =
-    s"""
+  val lastResponse: String =
+    """
       |{
       |    "request": {
-      |        "endpoint": "$item",
+      |        "endpoint": "next",
       |        "itemId": {
-      |            "requested": "$item",
-      |            "interpreted": "$item"
+      |            "requested": "FFF",
+      |            "interpreted": "FFF"
       |        },
-      |        "url": "https://$item"
+      |        "batchSize": {
+      |            "requested": "2",
+      |            "interpreted": 2
+      |        },
+      |        "url": "https://item/3/next/2"
       |    },
-      |    "flightStatuses": [
-      |        {
-      |            "flightId": 100000,
-      |            "carrierFsCode": "$carrierCode",
-      |            "operatingCarrierFsCode": "$carrierCode",
-      |            "primaryCarrierFsCode": "$carrierCode",
-      |            "flightNumber": "1000",
-      |            "departureAirportFsCode": "$carrierCode",
-      |            "arrivalAirportFsCode": "LHR",
-      |            "departureDate": {
-      |                "dateUtc": "2019-07-15T09:10:00.000Z",
-      |                "dateLocal": "2019-07-15T10:10:00.000"
-      |            },
-      |            "arrivalDate": {
-      |                "dateUtc": "2019-07-15T11:05:00.000Z",
-      |                "dateLocal": "2019-07-15T13:05:00.000"
-      |            },
-      |            "status": "A",
-      |            "schedule": {
-      |                "flightType": "J",
-      |                "serviceClasses": "XXXX",
-      |                "restrictions": "",
-      |                "uplines": [],
-      |                "downlines": []
-      |            },
-      |            "operationalTimes": {
-      |                "publishedDeparture": {
-      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
-      |                    "dateLocal": "2019-07-15T10:10:00.000"
-      |                },
-      |                "scheduledGateDeparture": {
-      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
-      |                    "dateLocal": "2019-07-15T10:10:00.000"
-      |                },
-      |                "estimatedRunwayDeparture": {
-      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
-      |                    "dateLocal": "2019-07-15T10:37:00.000"
-      |                },
-      |                "actualRunwayDeparture": {
-      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
-      |                    "dateLocal": "2019-07-15T10:37:00.000"
-      |                },
-      |                "publishedArrival": {
-      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
-      |                    "dateLocal": "2019-07-15T13:05:00.000"
-      |                },
-      |                "scheduledGateArrival": {
-      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
-      |                    "dateLocal": "2019-07-15T13:05:00.000"
-      |                }
-      |            },
-      |            "codeshares": [
-      |                {
-      |                    "fsCode": "CZ",
-      |                    "flightNumber": "1000",
-      |                    "relationship": "L"
-      |                },
-      |                {
-      |                    "fsCode": "DL",
-      |                    "flightNumber": "2000",
-      |                    "relationship": "L"
-      |                }
-      |            ],
-      |            "delays": {},
-      |            "flightDurations": {
-      |                "scheduledBlockMinutes": 115
-      |            },
-      |            "airportResources": {
-      |                "arrivalTerminal": "A"
-      |            },
-      |            "flightEquipment": {
-      |                "scheduledEquipmentIataCode": "XXX",
-      |                "actualEquipmentIataCode": "XXX",
-      |                "tailNumber": "Z-ZZZZ"
-      |            },
-      |            "flightStatusUpdates": [],
-      |            "irregularOperations": []
-      |        }
-      |    ]
+      |    "items": []
       |}
     """.stripMargin
-}
 
+  def flightStatusResponse(carrierCode: String, item: String) =
+    s"""
+       |{
+       |    "request": {
+       |        "endpoint": "$item",
+       |        "itemId": {
+       |            "requested": "$item",
+       |            "interpreted": "$item"
+       |        },
+       |        "url": "https://item/$item"
+       |    },
+       |    "flightStatuses": [
+       |        {
+       |            "flightId": 100000,
+       |            "carrierFsCode": "$carrierCode",
+       |            "operatingCarrierFsCode": "$carrierCode",
+       |            "primaryCarrierFsCode": "$carrierCode",
+       |            "flightNumber": "1000",
+       |            "departureAirportFsCode": "$carrierCode",
+       |            "arrivalAirportFsCode": "TST",
+       |            "departureDate": {
+       |                "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                "dateLocal": "2019-07-15T10:10:00.000"
+       |            },
+       |            "arrivalDate": {
+       |                "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                "dateLocal": "2019-07-15T13:05:00.000"
+       |            },
+       |            "status": "A",
+       |            "schedule": {
+       |                "flightType": "J",
+       |                "serviceClasses": "XXXX",
+       |                "restrictions": "",
+       |                "uplines": [],
+       |                "downlines": []
+       |            },
+       |            "operationalTimes": {
+       |                "publishedDeparture": {
+       |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:10:00.000"
+       |                },
+       |                "scheduledGateDeparture": {
+       |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:10:00.000"
+       |                },
+       |                "estimatedRunwayDeparture": {
+       |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:37:00.000"
+       |                },
+       |                "actualRunwayDeparture": {
+       |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:37:00.000"
+       |                },
+       |                "publishedArrival": {
+       |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                    "dateLocal": "2019-07-15T13:05:00.000"
+       |                },
+       |                "scheduledGateArrival": {
+       |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                    "dateLocal": "2019-07-15T13:05:00.000"
+       |                }
+       |            },
+       |            "codeshares": [
+       |                {
+       |                    "fsCode": "CZ",
+       |                    "flightNumber": "1000",
+       |                    "relationship": "L"
+       |                },
+       |                {
+       |                    "fsCode": "DL",
+       |                    "flightNumber": "2000",
+       |                    "relationship": "L"
+       |                }
+       |            ],
+       |            "delays": {},
+       |            "flightDurations": {
+       |                "scheduledBlockMinutes": 115
+       |            },
+       |            "airportResources": {
+       |                "arrivalTerminal": "A"
+       |            },
+       |            "flightEquipment": {
+       |                "scheduledEquipmentIataCode": "XXX",
+       |                "actualEquipmentIataCode": "XXX",
+       |                "tailNumber": "Z-ZZZZ"
+       |            },
+       |            "flightStatusUpdates": [],
+       |            "irregularOperations": []
+       |        }
+       |    ]
+       |}
+    """.stripMargin
+}
 

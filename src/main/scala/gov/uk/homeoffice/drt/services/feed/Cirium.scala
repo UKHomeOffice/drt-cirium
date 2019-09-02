@@ -10,12 +10,10 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import gov.uk.homeoffice.drt.services.entities._
-import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.Try
 
 object Cirium {
 
@@ -78,7 +76,7 @@ object Cirium {
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(goBackHops: Int = 0, step: Int = 1000) = {
+    def start(goBackHops: Int = 0, step: Int = 1000): Future[Source[CiriumFlightStatus, Cancellable]] = {
       val startingPoint = client
         .initialRequest()
         .map(crp => goBack(crp.item, goBackHops, step))
@@ -103,21 +101,19 @@ object Cirium {
             case Some(s) => s
           }
           .mapAsync(1)(s => {
-            println(s"About to request another $step")
             client.forwards(s, step).flatMap(r => {
-              println(s"starting another $step ${r.request.itemId}")
-              (askableLatestItemActor ? r.items.head).map(_ => r.items)
+              if (r.items.nonEmpty) {
+                (askableLatestItemActor ? r.items.last).map(_ => r.items)
+              } else Future(List())
             })
           })
           .mapConcat(identity)
           .mapAsync(20) { item =>
-            println(s"Fetching item: $item")
             client.requestItem(item)
           }
           .map(_.flightStatuses)
           .collect {
             case Some(fs) =>
-              println(s"Got ${fs.size} updates")
               fs
           }
           .mapConcat(identity)
@@ -130,11 +126,8 @@ object Cirium {
       .foldLeft(
         Future(startItem))(
           (prev: Future[String], _) => prev.map(si => {
-
-            println(s"Current start item is $si")
             client.backwards(si, step).map(r => r.items.head)
           }).flatten)
   }
 
 }
-
