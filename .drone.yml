@@ -1,10 +1,5 @@
 pipeline:
 
-  sonar-scanner:
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
-    when:
-      event: push
-      branch: ${DRONE_BRANCH}
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt:latest
