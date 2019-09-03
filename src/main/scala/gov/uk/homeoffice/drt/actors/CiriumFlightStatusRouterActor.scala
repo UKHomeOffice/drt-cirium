@@ -27,4 +27,3 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       log.error(s"Got this unexpected message ${other}")
   }
 }
-

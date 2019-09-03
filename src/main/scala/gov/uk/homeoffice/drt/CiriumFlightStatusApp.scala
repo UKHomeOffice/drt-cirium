@@ -1,23 +1,23 @@
 package gov.uk.homeoffice.drt
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.pattern.{ AskableActorRef, ask }
+import akka.pattern.{AskableActorRef, ask}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
-import gov.uk.homeoffice.drt.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
+import gov.uk.homeoffice.drt.actors.{CiriumFlightStatusRouterActor, CiriumPortStatusActor}
 import gov.uk.homeoffice.drt.actors.CiriumFlightStatusRouterActor.GetStatuses
 import gov.uk.homeoffice.drt.services.entities.CiriumFlightStatus
 import gov.uk.homeoffice.drt.services.feed.Cirium
 
-import scala.concurrent.duration.{ Duration, _ }
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 object CiriumFlightStatusApp extends App {
 
@@ -41,7 +41,9 @@ object CiriumFlightStatusApp extends App {
   val client = new Cirium.ProdClient(
     sys.env("CIRIUM_APP_ID"),
     sys.env("CIRIUM_APP_KEY"),
-    sys.env("CIRIUM_APP_ENTRY_POINT"))
+    sys.env("CIRIUM_APP_ENTRY_POINT")
+  )
+
   val feed = Cirium.Feed(client)
 
   feed.start(5).map(source => {

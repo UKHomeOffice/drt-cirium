@@ -9,7 +9,7 @@ lazy val root = (project in file(".")).
       organization := "gov.uk.homeoffice.drt",
       scalaVersion := "2.12.8"
     )),
-    name := "drt-arrivals",
+    name := "drt-cirium",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
@@ -22,3 +22,5 @@ lazy val root = (project in file(".")).
       "org.specs2" %% "specs2-core" % specs2 % Test
     )
   )
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging)
