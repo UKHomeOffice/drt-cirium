@@ -1,6 +1,5 @@
 pipeline:
 
-
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:

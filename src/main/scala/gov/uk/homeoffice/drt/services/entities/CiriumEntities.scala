@@ -1,6 +1,7 @@
 package gov.uk.homeoffice.drt.services.entities
 
 import akka.http.scaladsl.model.Uri
+import org.joda.time.DateTime
 
 case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
   def uri = Uri(item)
@@ -22,7 +23,14 @@ case class CiriumRequestMetaData(
 
 case class CiriumItemId(requested: String, interpreted: String)
 
-case class CiriumDate(dateUtc: String, dateLocal: Option[String])
+case class CiriumDate(dateUtc: String, dateLocal: Option[String], millis: Long)
+
+object CiriumDate {
+  def apply(dateUtc: String, dateLocal: Option[String]): CiriumDate = CiriumDate(
+    dateUtc,
+    dateLocal,
+    DateTime.parse(dateUtc).getMillis)
+}
 
 case class CiriumCodeshare(fsCode: String, flightNumber: String, relationship: String)
 

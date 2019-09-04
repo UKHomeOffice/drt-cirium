@@ -7,8 +7,6 @@ import scala.util.Failure
 
 object CiriumFlightStatusRouterActor {
 
-  final case object GetStatuses
-
   def props(portActors: Map[String, ActorRef]): Props = Props(classOf[CiriumFlightStatusRouterActor], portActors)
 }
 
