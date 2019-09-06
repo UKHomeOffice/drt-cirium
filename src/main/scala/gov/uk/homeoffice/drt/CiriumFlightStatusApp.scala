@@ -39,7 +39,7 @@ object CiriumFlightStatusApp extends App {
   val flightStatusActor: ActorRef = system
     .actorOf(CiriumFlightStatusRouterActor.props(portActors), "flight-status-actor")
 
-  val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "localhost", 8080)
+  val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "0.0.0.0", 8080)
 
   system
     .scheduler
