@@ -7,7 +7,8 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "gov.uk.homeoffice.drt",
-      scalaVersion := "2.12.8"
+      scalaVersion := "2.12.8",
+      version := "0.1",
     )),
     name := "drt-cirium",
     libraryDependencies ++= Seq(
