@@ -16,10 +16,10 @@ case class CiriumItemListResponse(request: CiriumRequestMetaData, items: List[St
 case class CiriumBatchSize(requested: String, interpreted: Int)
 
 case class CiriumRequestMetaData(
-                                  endpoint: String,
-                                  itemId: Option[CiriumItemId],
-                                  batchSize: Option[CiriumBatchSize],
-                                  url: String)
+  endpoint: String,
+  itemId: Option[CiriumItemId],
+  batchSize: Option[CiriumBatchSize],
+  url: String)
 
 case class CiriumItemId(requested: String, interpreted: String)
 
@@ -37,43 +37,42 @@ case class CiriumCodeshare(fsCode: String, flightNumber: String, relationship: S
 case class CiriumFlightStatusUpdate(updatedAt: CiriumDate, source: String)
 
 case class CiriumAirportResources(
-                                   departureTerminal: Option[String],
-                                   departureGate: Option[String],
-                                   arrivalTerminal: Option[String],
-                                   arrivalGate: Option[String],
-                                   baggage: Option[String])
+  departureTerminal: Option[String],
+  departureGate: Option[String],
+  arrivalTerminal: Option[String],
+  arrivalGate: Option[String],
+  baggage: Option[String])
 
 case class CiriumOperationalTimes(
-                                   publishedDeparture: Option[CiriumDate],
-                                   scheduledGateDeparture: Option[CiriumDate],
-                                   estimatedGateDeparture: Option[CiriumDate],
-                                   actualGateDeparture: Option[CiriumDate],
-                                   flightPlanPlannedDeparture: Option[CiriumDate],
-                                   scheduledRunwayDeparture: Option[CiriumDate],
-                                   estimatedRunwayDeparture: Option[CiriumDate],
-                                   actualRunwayDeparture: Option[CiriumDate],
-                                   publishedArrival: Option[CiriumDate],
-                                   flightPlanPlannedArrival: Option[CiriumDate],
-                                   scheduledGateArrival: Option[CiriumDate],
-                                   estimatedGateArrival: Option[CiriumDate],
-                                   actualGateArrival: Option[CiriumDate],
-                                   scheduledRunwayArrival: Option[CiriumDate],
-                                   estimatedRunwayArrival: Option[CiriumDate],
-                                   actualRunwayArrival: Option[CiriumDate]
-                                 )
+  publishedDeparture: Option[CiriumDate],
+  scheduledGateDeparture: Option[CiriumDate],
+  estimatedGateDeparture: Option[CiriumDate],
+  actualGateDeparture: Option[CiriumDate],
+  flightPlanPlannedDeparture: Option[CiriumDate],
+  scheduledRunwayDeparture: Option[CiriumDate],
+  estimatedRunwayDeparture: Option[CiriumDate],
+  actualRunwayDeparture: Option[CiriumDate],
+  publishedArrival: Option[CiriumDate],
+  flightPlanPlannedArrival: Option[CiriumDate],
+  scheduledGateArrival: Option[CiriumDate],
+  estimatedGateArrival: Option[CiriumDate],
+  actualGateArrival: Option[CiriumDate],
+  scheduledRunwayArrival: Option[CiriumDate],
+  estimatedRunwayArrival: Option[CiriumDate],
+  actualRunwayArrival: Option[CiriumDate])
 
 case class CiriumFlightStatus(
-                               flightId: Int,
-                               carrierFsCode: String,
-                               operatingCarrierFsCode: String,
-                               primaryCarrierFsCode: String,
-                               flightNumber: String,
-                               departureAirportFsCode: String,
-                               arrivalAirportFsCode: String,
-                               departureDate: CiriumDate,
-                               arrivalDate: CiriumDate,
-                               status: String,
-                               operationalTimes: CiriumOperationalTimes,
-                               codeshares: Seq[CiriumCodeshare],
-                               airportResources: Option[CiriumAirportResources],
-                               flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
+  flightId: Int,
+  carrierFsCode: String,
+  operatingCarrierFsCode: String,
+  primaryCarrierFsCode: String,
+  flightNumber: String,
+  departureAirportFsCode: String,
+  arrivalAirportFsCode: String,
+  departureDate: CiriumDate,
+  arrivalDate: CiriumDate,
+  status: String,
+  operationalTimes: CiriumOperationalTimes,
+  codeshares: Seq[CiriumCodeshare],
+  airportResources: Option[CiriumAirportResources],
+  flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
