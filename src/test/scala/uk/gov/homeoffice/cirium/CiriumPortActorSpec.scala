@@ -1,15 +1,15 @@
-package gov.uk.homeoffice.drt
+package uk.gov.homeoffice.cirium
 
 import akka.actor.ActorSystem
 import akka.pattern.AskableActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import gov.uk.homeoffice.drt.actors.CiriumPortStatusActor
-import gov.uk.homeoffice.drt.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
-import gov.uk.homeoffice.drt.services.entities._
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
+import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

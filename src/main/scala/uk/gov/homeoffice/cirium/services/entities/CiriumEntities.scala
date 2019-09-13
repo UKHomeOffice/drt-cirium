@@ -1,4 +1,4 @@
-package gov.uk.homeoffice.drt.services.entities
+package uk.gov.homeoffice.cirium.services.entities
 
 import akka.http.scaladsl.model.Uri
 import org.joda.time.DateTime

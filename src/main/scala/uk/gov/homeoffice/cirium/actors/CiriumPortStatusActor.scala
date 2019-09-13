@@ -1,8 +1,8 @@
-package gov.uk.homeoffice.drt.actors
+package uk.gov.homeoffice.cirium.actors
 
 import akka.actor.{ Actor, ActorLogging, Props }
-import gov.uk.homeoffice.drt.services.entities.CiriumFlightStatus
 import org.joda.time.DateTime
+import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 
 import scala.collection.mutable
 

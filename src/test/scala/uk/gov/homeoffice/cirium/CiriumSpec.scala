@@ -1,4 +1,4 @@
-package gov.uk.homeoffice.drt
+package uk.gov.homeoffice.cirium
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
@@ -7,9 +7,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
-import gov.uk.homeoffice.drt.services.entities._
-import gov.uk.homeoffice.drt.services.feed.Cirium
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

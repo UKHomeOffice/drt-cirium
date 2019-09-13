@@ -6,10 +6,10 @@ lazy val jodaTime = "2.9.4"
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization := "gov.uk.homeoffice.drt",
+      organization := "uk.gov.homeoffice",
       scalaVersion := "2.12.8",
-      version := "0.1",
     )),
+    version := "0.1.0",
     name := "drt-cirium",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
