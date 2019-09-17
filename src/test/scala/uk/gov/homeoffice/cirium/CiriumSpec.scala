@@ -5,7 +5,7 @@ import akka.http.scaladsl.model._
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import uk.gov.homeoffice.cirium.services.entities._
@@ -13,7 +13,7 @@ import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
   sequential
@@ -70,52 +70,52 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     result === expected
   }
 
-  //  "I should be able to parse a flight status response" >> {
-  //
-  //    val client = new MockClient(flightStatusResponse)
-  //    val result = Await.result(client.requestItem("endpoint"), 1 second)
-  //
-  //    val expected = CiriumFlightStatusResponse(
-  //      CiriumRequestMetaData(
-  //        "item",
-  //        Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
-  //        None,
-  //        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"),
-  //      Option(List(
-  //        CiriumFlightStatus(
-  //          100000,
-  //          "TST",
-  //          "TST",
-  //          "TST",
-  //          "1000",
-  //          "TST",
-  //          "LHR",
-  //          CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
-  //          CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
-  //          "A",
-  //          CiriumOperationalTimes(
-  //            Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
-  //            Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
-  //            Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
-  //            Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
-  //            Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000"))),
-  //            Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000"))),
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None,
-  //            None),
-  //          List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
-  //          Some(CiriumAirportResources(None, None, Some("A"), None, None)),
-  //          Seq()))))
-  //
-  //    result === expected
-  //  }
+  "I should be able to parse a flight status response" >> {
+
+    val client = new MockClient(flightStatusResponse)
+    val result = Await.result(client.requestItem("endpoint"), 1 second)
+
+    val expected = CiriumFlightStatusResponse(
+      CiriumRequestMetaData(
+        "item",
+        Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
+        None,
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"),
+      Option(List(
+        CiriumFlightStatus(
+          100000,
+          "TST",
+          "TST",
+          "TST",
+          "1000",
+          "TST",
+          "LHR",
+          CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
+          CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
+          "A",
+          CiriumOperationalTimes(
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            None,
+            None,
+            None,
+            None,
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            None,
+            None,
+            None,
+            None),
+          List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
+          Some(CiriumAirportResources(None, None, Some("A"), None, None)),
+          Seq()))))
+
+    result === expected
+  }
 
   val initialResponse: String =
     """
