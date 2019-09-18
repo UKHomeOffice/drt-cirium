@@ -12,8 +12,6 @@ pipeline:
     when:
       event:
       - push
-      branch:
-      - ${DRONE_BRANCH}
 
   build_push_to_ecr:
     image: quay.io/ukhomeofficedigital/ecr:latest
