@@ -1,15 +1,15 @@
-package gov.uk.homeoffice.drt
+package uk.gov.homeoffice.cirium
 
 import akka.actor.ActorSystem
 import akka.pattern.AskableActorRef
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import gov.uk.homeoffice.drt.actors.CiriumPortStatusActor
-import gov.uk.homeoffice.drt.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
-import gov.uk.homeoffice.drt.services.entities._
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
+import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -59,7 +59,17 @@ object MockFlightStatus {
       Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
       Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
       Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000"))),
-      Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")))),
+      Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000"))),
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None),
     List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
     Some(CiriumAirportResources(None, None, Some("A"), None, None)),
     Seq())

@@ -4,7 +4,7 @@ pipeline:
     image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
     - /root/entrypoint.sh
-    - sbt test docker:stage
+    - sbt test publish docker:stage
     environment:
     - ARTIFACTORY_USERNAME=drt_optimiser_drone
     secrets:
@@ -12,8 +12,7 @@ pipeline:
     when:
       event:
       - push
-      branch:
-      - ${DRONE_BRANCH}
+
 
   build_push_to_ecr:
     image: quay.io/ukhomeofficedigital/ecr:latest
@@ -27,3 +26,7 @@ pipeline:
     - latest
     - ${DRONE_COMMIT_SHA}
     - ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+

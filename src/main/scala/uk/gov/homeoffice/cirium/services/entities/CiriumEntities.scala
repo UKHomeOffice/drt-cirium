@@ -1,4 +1,4 @@
-package gov.uk.homeoffice.drt.services.entities
+package uk.gov.homeoffice.cirium.services.entities
 
 import akka.http.scaladsl.model.Uri
 import org.joda.time.DateTime
@@ -46,10 +46,20 @@ case class CiriumAirportResources(
 case class CiriumOperationalTimes(
   publishedDeparture: Option[CiriumDate],
   scheduledGateDeparture: Option[CiriumDate],
+  estimatedGateDeparture: Option[CiriumDate],
+  actualGateDeparture: Option[CiriumDate],
+  flightPlanPlannedDeparture: Option[CiriumDate],
+  scheduledRunwayDeparture: Option[CiriumDate],
   estimatedRunwayDeparture: Option[CiriumDate],
   actualRunwayDeparture: Option[CiriumDate],
   publishedArrival: Option[CiriumDate],
-  scheduledGateArrival: Option[CiriumDate])
+  flightPlanPlannedArrival: Option[CiriumDate],
+  scheduledGateArrival: Option[CiriumDate],
+  estimatedGateArrival: Option[CiriumDate],
+  actualGateArrival: Option[CiriumDate],
+  scheduledRunwayArrival: Option[CiriumDate],
+  estimatedRunwayArrival: Option[CiriumDate],
+  actualRunwayArrival: Option[CiriumDate])
 
 case class CiriumFlightStatus(
   flightId: Int,
@@ -66,4 +76,3 @@ case class CiriumFlightStatus(
   codeshares: Seq[CiriumCodeshare],
   airportResources: Option[CiriumAirportResources],
   flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
-

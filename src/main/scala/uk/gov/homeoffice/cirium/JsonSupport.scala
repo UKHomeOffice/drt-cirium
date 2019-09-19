@@ -1,8 +1,8 @@
-package gov.uk.homeoffice.drt
+package uk.gov.homeoffice.cirium
 
-import spray.json.{ DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import gov.uk.homeoffice.drt.services.entities._
+import spray.json.{ DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
+import uk.gov.homeoffice.cirium.services.entities._
 
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumRequestMetaJsonFormat: RootJsonFormat[CiriumItemId] = jsonFormat2(CiriumItemId)
@@ -12,7 +12,7 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumItemIdJsonFormat: RootJsonFormat[CiriumRequestMetaData] = jsonFormat4(CiriumRequestMetaData)
   implicit val ciriumResponseJsonFormat: RootJsonFormat[CiriumInitialResponse] = jsonFormat2(CiriumInitialResponse)
   implicit val ciriumItemsResponseJsonFormat: RootJsonFormat[CiriumItemListResponse] = jsonFormat2(CiriumItemListResponse)
-  implicit val ciriumOperationalTimesJsonFormat: RootJsonFormat[CiriumOperationalTimes] = jsonFormat6(CiriumOperationalTimes)
+  implicit val ciriumOperationalTimesJsonFormat: RootJsonFormat[CiriumOperationalTimes] = jsonFormat16(CiriumOperationalTimes)
   implicit val ciriumCodesharesJsonFormat: RootJsonFormat[CiriumCodeshare] = jsonFormat3(CiriumCodeshare)
   implicit val ciriumAirportResourcesJsonFormat: RootJsonFormat[CiriumAirportResources] = jsonFormat5(CiriumAirportResources)
   implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat14(CiriumFlightStatus)

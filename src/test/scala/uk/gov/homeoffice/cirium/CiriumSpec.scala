@@ -1,4 +1,4 @@
-package gov.uk.homeoffice.drt
+package uk.gov.homeoffice.cirium
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
@@ -7,9 +7,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
-import gov.uk.homeoffice.drt.services.entities._
-import gov.uk.homeoffice.drt.services.feed.Cirium
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -94,12 +94,22 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
           "A",
           CiriumOperationalTimes(
-            Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
-            Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
-            Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
-            Some(CiriumDate("2019-07-15T09:37:00.000Z", Option("2019-07-15T10:37:00.000"))),
-            Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000"))),
-            Some(CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")))),
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            None,
+            None,
+            None,
+            None,
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            None,
+            None,
+            None,
+            None),
           List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
           Some(CiriumAirportResources(None, None, Some("A"), None, None)),
           Seq()))))

@@ -1,4 +1,4 @@
-package gov.uk.homeoffice.drt.services.feed
+package uk.gov.homeoffice.cirium.services.feed
 
 import akka.NotUsed
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Cancellable, Props }
@@ -9,7 +9,7 @@ import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import gov.uk.homeoffice.drt.services.entities._
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -21,12 +21,12 @@ object Cirium {
 
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-    import gov.uk.homeoffice.drt.JsonSupport._
+    import uk.gov.homeoffice.cirium.JsonSupport._
 
     def initialRequest(): Future[CiriumInitialResponse] = makeRequest(entryPoint).map(res => Unmarshal[HttpResponse](res)
       .to[CiriumInitialResponse]).flatten
 
-    def backwards(latestItemLocation: String, step: Int = 1000) =
+    def backwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
       makeRequest(latestItemLocation + s"/previous/$step")
         .map(res => Unmarshal[HttpResponse](res)
           .to[CiriumItemListResponse]).flatten

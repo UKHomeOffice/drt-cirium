@@ -1,7 +1,7 @@
-package gov.uk.homeoffice.drt.actors
+package uk.gov.homeoffice.cirium.actors
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import gov.uk.homeoffice.drt.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 
 import scala.util.Failure
 
