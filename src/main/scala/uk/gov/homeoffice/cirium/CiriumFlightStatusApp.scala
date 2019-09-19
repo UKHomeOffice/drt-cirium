@@ -43,7 +43,7 @@ object CiriumFlightStatusApp extends App {
 
   system
     .scheduler
-    .scheduleAtFixedRate(1 minute, 1 minute)(() => portActors.mapValues(actor => actor ! RemoveExpired))
+    .schedule(1 minute, 1 minute)(() => portActors.mapValues(actor => actor ! RemoveExpired))
 
   val client = new Cirium.ProdClient(
     sys.env("CIRIUM_APP_ID"),

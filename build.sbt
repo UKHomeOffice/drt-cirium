@@ -1,5 +1,5 @@
 lazy val akkaHttpVersion = "10.1.9"
-lazy val akkaVersion = "2.6.0-M5"
+lazy val akkaVersion = "2.5.23"
 lazy val specs2 = "4.6.0"
 lazy val jodaTime = "2.9.4"
 
@@ -9,7 +9,7 @@ lazy val root = (project in file(".")).
       organization := "uk.gov.homeoffice",
       scalaVersion := "2.12.8",
     )),
-    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev")),
+    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "27")),
     name := "drt-cirium",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
