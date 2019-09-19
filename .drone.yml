@@ -12,6 +12,7 @@ pipeline:
     when:
       event:
       - push
+      - pull_request
 
   build_push_to_ecr:
     image: quay.io/ukhomeofficedigital/ecr:latest
@@ -25,3 +26,7 @@ pipeline:
     - latest
     - ${DRONE_COMMIT_SHA}
     - ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+        - pull_request
