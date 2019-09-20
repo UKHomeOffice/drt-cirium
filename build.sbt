@@ -9,7 +9,7 @@ lazy val root = (project in file(".")).
       organization := "uk.gov.homeoffice",
       scalaVersion := "2.12.8",
     )),
-    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "27")),
+    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "28")),
     name := "drt-cirium",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,

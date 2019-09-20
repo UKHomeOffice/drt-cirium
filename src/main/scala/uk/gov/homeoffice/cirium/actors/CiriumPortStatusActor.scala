@@ -34,11 +34,12 @@ class CiriumPortStatusActor(
       replyTo ! statuses.values.toList
 
     case RemoveExpired =>
-      println((nowMillis() - expireAfterMillis))
       val forRemoval = statuses.collect {
         case (key, status) if status.arrivalDate.millis < (nowMillis() - expireAfterMillis) =>
           key
       }
+
+      log.info(s"Removing ${statuses.size} expired flight statuses")
 
       statuses --= forRemoval
 

@@ -111,7 +111,7 @@ object Cirium {
           .mapAsync(20) { item =>
             client.requestItem(item)
           }
-          .map(_.flightStatuses)
+          .map((r: CiriumFlightStatusResponse) => r.flightStatuses)
           .collect {
             case Some(fs) =>
               fs
@@ -126,6 +126,7 @@ object Cirium {
       .foldLeft(
         Future(startItem))(
           (prev: Future[String], _) => prev.map(si => {
+            println(s"Going Back $step from $si")
             client.backwards(si, step).map(r => r.items.head)
           }).flatten)
   }

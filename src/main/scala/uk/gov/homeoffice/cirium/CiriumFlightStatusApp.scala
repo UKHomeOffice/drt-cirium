@@ -10,11 +10,13 @@ import akka.pattern.{ AskableActorRef, ask }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
+import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.{ GetAllFlightDeltas, GetFlightDeltas }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
+import scala.collection.mutable
 import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
@@ -27,7 +29,7 @@ object CiriumFlightStatusApp extends App {
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit lazy val timeout: Timeout = 3.seconds
 
-  lazy val routes: Route = flightStatusRoutes
+  lazy val routes: Route = flightStatusRoutes ~ flightStatusDeltasRoutes
 
   val portCodes = sys.env("PORT_CODES").split(",")
 
@@ -52,7 +54,9 @@ object CiriumFlightStatusApp extends App {
 
   val feed = Cirium.Feed(client)
 
-  feed.start(5).map(source => {
+  val goBackHops = sys.env.getOrElse("CIRIUM_GO_BACK_X_1000", "5").toInt
+
+  feed.start(goBackHops).map(source => {
     source.runWith(Sink.actorRef(flightStatusActor, "complete"))
   })
 
@@ -82,9 +86,46 @@ object CiriumFlightStatusApp extends App {
         })
     }
 
+  lazy val flightStatusDeltasRoutes: Route =
+    pathPrefix("deltas") {
+      concat(
+        pathEnd {
+          concat(
+            get {
+              rejectEmptyResponse {
+                complete {
+                  val askableRouterActor: AskableActorRef = flightStatusActor
+                  (askableRouterActor ? GetAllFlightDeltas)
+                    .mapTo[mutable.Map[Int, mutable.Seq[CiriumFlightStatus]]].map {
+                      statuses =>
+                        statuses.map {
+                          case (flightId, updates) => flightId.toString -> updates.size
+                        }.toMap
+                    }
+                }
+              }
+            })
+        },
+        path(Segment) { flightId =>
+          get {
+            val askableRouterActor: AskableActorRef = flightStatusActor
+            rejectEmptyResponse {
+              complete {
+                (askableRouterActor ? GetFlightDeltas(flightId.toInt))
+                  .mapTo[List[CiriumFlightStatus]]
+              }
+            }
+          }
+        })
+    }
+
   serverBinding.onComplete {
     case Success(bound) =>
-      println(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
+      println(s"Server online at http://${
+        bound.localAddress.getHostString
+      }:${
+        bound.localAddress.getPort
+      }/")
     case Failure(e) =>
       Console.err.println(s"Server could not start!")
       e.printStackTrace()
