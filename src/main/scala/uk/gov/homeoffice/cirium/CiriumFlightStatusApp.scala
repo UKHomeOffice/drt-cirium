@@ -13,7 +13,7 @@ import akka.util.Timeout
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.{ GetAllFlightDeltas, GetFlightDeltas }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
-import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.collection.mutable
@@ -96,9 +96,9 @@ object CiriumFlightStatusApp extends App {
                 complete {
                   val askableRouterActor: AskableActorRef = flightStatusActor
                   (askableRouterActor ? GetAllFlightDeltas)
-                    .mapTo[mutable.Map[Int, mutable.Seq[CiriumFlightStatus]]].map {
-                      statuses =>
-                        statuses.map {
+                    .mapTo[mutable.Map[Int, mutable.Seq[CiriumTrackableStatus]]].map {
+                      trackableStatuses =>
+                        trackableStatuses.map {
                           case (flightId, updates) => flightId.toString -> updates.size
                         }.toMap
                     }
@@ -112,7 +112,7 @@ object CiriumFlightStatusApp extends App {
             rejectEmptyResponse {
               complete {
                 (askableRouterActor ? GetFlightDeltas(flightId.toInt))
-                  .mapTo[List[CiriumFlightStatus]]
+                  .mapTo[List[CiriumTrackableStatus]]
               }
             }
           }

@@ -3,14 +3,15 @@ package uk.gov.homeoffice.cirium.services.feed
 import akka.NotUsed
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Cancellable, Props }
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
+import akka.http.scaladsl.model.{ DateTime, HttpMethods, HttpRequest, HttpResponse, Uri }
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse }
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -71,12 +72,12 @@ object Cirium {
     }
   }
 
-  case class Feed(client: Client)(implicit system: ActorSystem) {
+  case class Feed(client: Client, debug: Boolean = false)(implicit system: ActorSystem) {
     implicit val timeout = new Timeout(30 seconds)
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(goBackHops: Int = 0, step: Int = 1000): Future[Source[CiriumFlightStatus, Cancellable]] = {
+    def start(goBackHops: Int = 0, step: Int = 1000): Future[Source[CiriumTrackableStatus, Cancellable]] = {
       val startingPoint = client
         .initialRequest()
         .map(crp => goBack(crp.item, goBackHops, step))
@@ -85,17 +86,16 @@ object Cirium {
       tick(startingPoint, step)
     }
 
-    def tick(start: Future[String], step: Int): Future[Source[CiriumFlightStatus, Cancellable]] = {
+    def tick(start: Future[String], step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] = {
 
       start.map(s => askableLatestItemActor ? s).map { _ =>
-        val tickingSource: Source[CiriumFlightStatus, Cancellable] = Source
+        val tickingSource: Source[CiriumTrackableStatus, Cancellable] = Source
           .tick(1 milli, 100 millis, NotUsed)
           .mapAsync(1)(_ => {
             (askableLatestItemActor ? Ask).map {
               case s: Some[String] => s
               case _ => None
             }
-
           })
           .collect {
             case Some(s) => s
@@ -111,10 +111,12 @@ object Cirium {
           .mapAsync(20) { item =>
             client.requestItem(item)
           }
-          .map((r: CiriumFlightStatusResponse) => r.flightStatuses)
           .collect {
-            case Some(fs) =>
-              fs
+            case CiriumFlightStatusResponse(meta, maybeFS) if maybeFS.isDefined =>
+              val trackableFlights: immutable.Seq[CiriumTrackableStatus] = maybeFS.get.map { f =>
+                CiriumTrackableStatus(f, meta.url, System.currentTimeMillis)
+              }
+              trackableFlights
           }
           .mapConcat(identity)
 

@@ -2,7 +2,7 @@ package uk.gov.homeoffice.cirium.actors
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.{ GetAllFlightDeltas, GetFlightDeltas }
-import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 
 import scala.collection.mutable
 import scala.util.Failure
@@ -19,17 +19,15 @@ object CiriumFlightStatusRouterActor {
 
 class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor with ActorLogging {
 
-  val flightDeltas: mutable.Map[Int, mutable.Seq[CiriumFlightStatus]] = mutable.Map()
+  val flightDeltas: mutable.Map[Int, mutable.Seq[CiriumTrackableStatus]] = mutable.Map()
 
   def receive: Receive = {
 
-    case s: CiriumFlightStatus =>
+    case ts: CiriumTrackableStatus =>
+      flightDeltas(ts.status.flightId) = flightDeltas.getOrElse(ts.status.flightId, mutable.Seq()) :+ ts
+      val portCodeForUpdate = ts.status.arrivalAirportFsCode
+      portActors.get(portCodeForUpdate).foreach(_ ! ts.status)
 
-      flightDeltas(s.flightId) = flightDeltas.getOrElse(s.flightId, mutable.Seq()) :+ s
-
-      val portCodeForUpdate = s.arrivalAirportFsCode
-
-      portActors.get(portCodeForUpdate).foreach(_ ! s)
     case GetFlightDeltas(flightId) =>
       val replyTo = sender()
 
