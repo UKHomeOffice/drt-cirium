@@ -3,13 +3,14 @@ package uk.gov.homeoffice.cirium.services.feed
 import akka.NotUsed
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Cancellable, Props }
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ DateTime, HttpMethods, HttpRequest, HttpResponse, Uri }
+import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
+import org.joda.time.DateTime
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,9 +39,7 @@ object Cirium {
 
     def makeRequest(endpoint: String): Future[HttpResponse] = {
 
-      val uri = Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")
-
-      sendReceive(uri)
+      sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey"))
     }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
@@ -64,6 +63,8 @@ object Cirium {
     def receive: Receive = {
 
       case item: String =>
+
+        println(s"${DateTime.now().toDateTimeISO} Latest item is $item")
         lastItem = Option(item)
 
         sender() ! "Ack"
@@ -119,7 +120,6 @@ object Cirium {
               trackableFlights
           }
           .mapConcat(identity)
-
         tickingSource
       }
     }
