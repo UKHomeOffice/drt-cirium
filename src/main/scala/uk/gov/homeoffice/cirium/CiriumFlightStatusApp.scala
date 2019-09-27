@@ -10,8 +10,9 @@ import akka.pattern.{ AskableActorRef, ask }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
+import com.typesafe.scalalogging.Logger
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.{ GetAllFlightDeltas, GetFlightDeltas }
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 import uk.gov.homeoffice.cirium.services.feed.Cirium
@@ -23,13 +24,14 @@ import scala.language.postfixOps
 import scala.util.{ Failure, Success }
 
 object CiriumFlightStatusApp extends App {
+  val logger = Logger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit lazy val timeout: Timeout = 3.seconds
 
-  lazy val routes: Route = flightStatusRoutes ~ flightStatusDeltasRoutes
+  lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes
 
   val portCodes = sys.env("PORT_CODES").split(",")
 
@@ -86,49 +88,28 @@ object CiriumFlightStatusApp extends App {
         })
     }
 
-  lazy val flightStatusDeltasRoutes: Route =
-    pathPrefix("deltas") {
+  lazy val flightTrackableStatusRoutes: Route =
+    pathPrefix("statuses-tracked") {
       concat(
-        pathEnd {
-          concat(
-            get {
-              rejectEmptyResponse {
-                complete {
-                  val askableRouterActor: AskableActorRef = flightStatusActor
-                  (askableRouterActor ? GetAllFlightDeltas)
-                    .mapTo[mutable.Map[Int, mutable.Seq[CiriumTrackableStatus]]].map {
-                      trackableStatuses =>
-                        trackableStatuses.map {
-                          case (flightId, updates) => flightId.toString -> updates.size
-                        }.toMap
-                    }
-                }
-              }
-            })
-        },
-        path(Segment) { flightId =>
+        path(Segment) { portCode =>
           get {
-            val askableRouterActor: AskableActorRef = flightStatusActor
+            val maybeStatuses = portActors.get(portCode.toUpperCase).map {
+              actor =>
+                val askablePortActor: AskableActorRef = actor
+                (askablePortActor ? GetTrackableStatuses)
+                  .mapTo[List[CiriumFlightStatus]]
+            }
             rejectEmptyResponse {
-              complete {
-                (askableRouterActor ? GetFlightDeltas(flightId.toInt))
-                  .mapTo[List[CiriumTrackableStatus]]
-              }
+              complete(maybeStatuses)
             }
           }
         })
     }
-
   serverBinding.onComplete {
     case Success(bound) =>
-      println(s"Server online at http://${
-        bound.localAddress.getHostString
-      }:${
-        bound.localAddress.getPort
-      }/")
+      logger.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
     case Failure(e) =>
-      Console.err.println(s"Server could not start!")
-      e.printStackTrace()
+      logger.error(s"Server could not start!", e)
       system.terminate()
   }
   Await.result(system.whenTerminated, Duration.Inf)

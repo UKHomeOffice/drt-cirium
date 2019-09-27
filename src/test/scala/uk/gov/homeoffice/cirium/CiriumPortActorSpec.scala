@@ -25,8 +25,8 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
     implicit lazy val timeout: Timeout = 3.seconds
     val askablePortStatusActor: AskableActorRef = portStatusActor
 
-    val statusToExpire = MockFlightStatus(1, "2019-09-04T10:50:59.000Z")
-    val statusToKeep = MockFlightStatus(2, "2019-09-04T11:51:01.000Z")
+    val statusToExpire = CiriumTrackableStatus(MockFlightStatus(1, "2019-09-04T10:50:59.000Z"), "", 0L)
+    val statusToKeep = CiriumTrackableStatus(MockFlightStatus(2, "2019-09-04T11:51:01.000Z"), "", 0L)
 
     portStatusActor ! statusToExpire
     portStatusActor ! statusToKeep
@@ -34,7 +34,7 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
     portStatusActor ! RemoveExpired
 
     val result = Await.result(askablePortStatusActor ? GetStatuses, 1 second)
-    val expected = List(statusToKeep)
+    val expected = List(statusToKeep.status)
 
     result === expected
   }

@@ -8,7 +8,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor
-import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,10 +59,10 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       source.runWith(Sink.actorRef(flightStatusActor, "complete"))
     }
 
-    probe.fishForMessage(3 seconds) {
-      case s: CiriumFlightStatus if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX5" =>
+    probe.fishForMessage(5 seconds) {
+      case CiriumTrackableStatus(s, _, _) if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX5" =>
         true
-      case s: CiriumFlightStatus =>
+      case CiriumTrackableStatus(s, _, _) =>
         println(s"Got this ${s.carrierFsCode}, ${s.arrivalAirportFsCode}")
         false
     }
