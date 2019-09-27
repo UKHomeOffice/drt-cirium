@@ -86,7 +86,7 @@ object Cirium {
     }
   }
 
-  case class Feed(client: Client, debug: Boolean = false)(implicit system: ActorSystem) {
+  case class Feed(client: Client, pollEveryMillis: Int)(implicit system: ActorSystem) {
     implicit val timeout = new Timeout(30 seconds)
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
@@ -104,7 +104,7 @@ object Cirium {
 
       start.map(s => askableLatestItemActor ? LatestItem(s)).map { _ =>
         val tickingSource: Source[CiriumTrackableStatus, Cancellable] = Source
-          .tick(1 milli, 100 millis, NotUsed)
+          .tick(1 milli, pollEveryMillis millis, NotUsed)
           .mapAsync(1)(_ => {
             (askableLatestItemActor ? Ask).map {
               case LatestItem(endpoint) => endpoint
@@ -119,7 +119,6 @@ object Cirium {
               if (r.items.nonEmpty) {
                 (askableLatestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
               } else {
-                log.info(s"Got zero links to load from $s")
                 Future(List())
               }
             })

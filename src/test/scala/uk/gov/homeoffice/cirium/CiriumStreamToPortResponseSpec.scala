@@ -47,7 +47,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   "Given a stream of messages, each should end up in the correct port" >> {
 
     val client = new MockClient("https://latest")
-    val feed = Cirium.Feed(client)
+    val feed = Cirium.Feed(client, pollEveryMillis = 100)
     val probe = TestProbe()
 
     implicit val mat: ActorMaterializer = ActorMaterializer()

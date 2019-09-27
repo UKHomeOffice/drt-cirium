@@ -11,13 +11,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
 import com.typesafe.scalalogging.Logger
-import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.{ GetAllFlightDeltas, GetFlightDeltas }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
+import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
-import scala.collection.mutable
 import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
@@ -54,7 +52,7 @@ object CiriumFlightStatusApp extends App {
     sys.env("CIRIUM_APP_KEY"),
     sys.env("CIRIUM_APP_ENTRY_POINT"))
 
-  val feed = Cirium.Feed(client)
+  val feed = Cirium.Feed(client, pollEveryMillis = sys.env.getOrElse("CIRIUM_POLL_MILLIS", "5000").toInt)
 
   val goBackHops = sys.env.getOrElse("CIRIUM_GO_BACK_X_1000", "5").toInt
 
