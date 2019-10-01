@@ -76,3 +76,5 @@ case class CiriumFlightStatus(
   codeshares: Seq[CiriumCodeshare],
   airportResources: Option[CiriumAirportResources],
   flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
+
+case class CiriumTrackableStatus(status: CiriumFlightStatus, messageUri: String, processedMillis: Long)

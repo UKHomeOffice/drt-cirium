@@ -26,7 +26,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"))
-    val feed = new Cirium.Feed(client)
+    val feed = new Cirium.Feed(client, pollEveryMillis = 100)
     val probe = TestProbe()
 
     implicit val mat: ActorMaterializer = ActorMaterializer()

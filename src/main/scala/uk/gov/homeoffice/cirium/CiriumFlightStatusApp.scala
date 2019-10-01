@@ -10,7 +10,8 @@ import akka.pattern.{ AskableActorRef, ask }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
+import com.typesafe.scalalogging.Logger
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.cirium.services.feed.Cirium
@@ -21,13 +22,14 @@ import scala.language.postfixOps
 import scala.util.{ Failure, Success }
 
 object CiriumFlightStatusApp extends App {
+  val logger = Logger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit lazy val timeout: Timeout = 3.seconds
 
-  lazy val routes: Route = flightStatusRoutes
+  lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes
 
   val portCodes = sys.env("PORT_CODES").split(",")
 
@@ -50,9 +52,11 @@ object CiriumFlightStatusApp extends App {
     sys.env("CIRIUM_APP_KEY"),
     sys.env("CIRIUM_APP_ENTRY_POINT"))
 
-  val feed = Cirium.Feed(client)
+  val feed = Cirium.Feed(client, pollEveryMillis = sys.env.getOrElse("CIRIUM_POLL_MILLIS", "5000").toInt)
 
-  feed.start(5).map(source => {
+  val goBackHops = sys.env.getOrElse("CIRIUM_GO_BACK_X_1000", "5").toInt
+
+  feed.start(goBackHops).map(source => {
     source.runWith(Sink.actorRef(flightStatusActor, "complete"))
   })
 
@@ -82,12 +86,28 @@ object CiriumFlightStatusApp extends App {
         })
     }
 
+  lazy val flightTrackableStatusRoutes: Route =
+    pathPrefix("statuses-tracked") {
+      concat(
+        path(Segment) { portCode =>
+          get {
+            val maybeStatuses = portActors.get(portCode.toUpperCase).map {
+              actor =>
+                val askablePortActor: AskableActorRef = actor
+                (askablePortActor ? GetTrackableStatuses)
+                  .mapTo[List[CiriumFlightStatus]]
+            }
+            rejectEmptyResponse {
+              complete(maybeStatuses)
+            }
+          }
+        })
+    }
   serverBinding.onComplete {
     case Success(bound) =>
-      println(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
+      logger.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
     case Failure(e) =>
-      Console.err.println(s"Server could not start!")
-      e.printStackTrace()
+      logger.error(s"Server could not start!", e)
       system.terminate()
   }
   Await.result(system.whenTerminated, Duration.Inf)
