@@ -46,7 +46,7 @@ class CiriumPortStatusActor(
       replyTo ! trackableStatuses.values.toList
 
     case RemoveExpired =>
-      val expireAfter = (nowMillis() - expireAfterMillis)
+      val expireAfter = nowMillis() - expireAfterMillis
 
       val forRemoval = trackableStatuses.collect {
         case (key, CiriumTrackableStatus(status, _, _)) if status.arrivalDate.millis < expireAfter =>
