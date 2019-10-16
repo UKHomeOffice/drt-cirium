@@ -1,28 +1,28 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.pattern.{AskableActorRef, ask}
+import akka.pattern.{ AskableActorRef, ask }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.Timeout
 import com.typesafe.scalalogging.Logger
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{GetStatuses, GetTrackableStatuses, RemoveExpired}
-import uk.gov.homeoffice.cirium.actors.{CiriumFlightStatusRouterActor, CiriumPortStatusActor}
-import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatus, CiriumTrackableStatus}
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses }
+import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
-import scala.concurrent.duration.{Duration, _}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.{ Duration, _ }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 object CiriumFlightStatusApp extends App {
-  val logger = Logger(getClass)
+  val log = Logger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -42,10 +42,6 @@ object CiriumFlightStatusApp extends App {
     .actorOf(CiriumFlightStatusRouterActor.props(portActors), "flight-status-actor")
 
   val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "0.0.0.0", 8080)
-
-  system
-    .scheduler
-    .schedule(1 minute, 1 minute)(() => portActors.mapValues(actor => actor ! RemoveExpired))
 
   val client = new Cirium.ProdClient(
     sys.env("CIRIUM_APP_ID"),
@@ -105,9 +101,9 @@ object CiriumFlightStatusApp extends App {
     }
   serverBinding.onComplete {
     case Success(bound) =>
-      logger.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
+      log.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
     case Failure(e) =>
-      logger.error(s"Server could not start!", e)
+      log.error(s"Server could not start!", e)
       system.terminate()
   }
   Await.result(system.whenTerminated, Duration.Inf)
