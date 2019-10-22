@@ -70,6 +70,8 @@ object MockFlightStatus {
       None,
       None,
       None),
+    None,
+    None,
     List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
     Some(CiriumAirportResources(None, None, Some("A"), None, None)),
     Seq())
