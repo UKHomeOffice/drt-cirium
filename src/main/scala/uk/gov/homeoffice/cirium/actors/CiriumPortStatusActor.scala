@@ -35,6 +35,7 @@ class CiriumPortStatusActor(
   timers.startPeriodicTimer(TickKey, RemoveExpired, 1 minutes)
 
   def receive: Receive = {
+
     case GetStatuses =>
       val replyTo = sender()
       log.info(s"Sending ${trackableStatuses.size} flight statuses")

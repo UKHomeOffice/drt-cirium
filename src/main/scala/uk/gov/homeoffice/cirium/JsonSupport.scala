@@ -7,6 +7,8 @@ import uk.gov.homeoffice.cirium.services.entities._
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumRequestMetaJsonFormat: RootJsonFormat[CiriumItemId] = jsonFormat2(CiriumItemId)
   implicit val ciriumDateJsonFormat: RootJsonFormat[CiriumDate] = CiriumDateProtocol.CiriumDateFormat
+  implicit val ciriumFlightDurationsJsonFormat: RootJsonFormat[CiriumFlightDurations] = jsonFormat8(CiriumFlightDurations)
+  implicit val ciriumDelaysJsonFormat: RootJsonFormat[CiriumDelays] = jsonFormat4(CiriumDelays)
   implicit val ciriumFlightStatusUpdateJsonFormat: RootJsonFormat[CiriumFlightStatusUpdate] = jsonFormat2(CiriumFlightStatusUpdate)
   implicit val ciriumBatchSizeJsonFormat: RootJsonFormat[CiriumBatchSize] = jsonFormat2(CiriumBatchSize)
   implicit val ciriumItemIdJsonFormat: RootJsonFormat[CiriumRequestMetaData] = jsonFormat4(CiriumRequestMetaData)
@@ -15,7 +17,7 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumOperationalTimesJsonFormat: RootJsonFormat[CiriumOperationalTimes] = jsonFormat16(CiriumOperationalTimes)
   implicit val ciriumCodesharesJsonFormat: RootJsonFormat[CiriumCodeshare] = jsonFormat3(CiriumCodeshare)
   implicit val ciriumAirportResourcesJsonFormat: RootJsonFormat[CiriumAirportResources] = jsonFormat5(CiriumAirportResources)
-  implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat14(CiriumFlightStatus)
+  implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat16(CiriumFlightStatus)
   implicit val ciriumFlightStatusResponseJsonFormat: RootJsonFormat[CiriumFlightStatusResponse] = jsonFormat2(CiriumFlightStatusResponse)
   implicit val ciriumTrackableStatusJsonFormat: RootJsonFormat[CiriumTrackableStatus] = jsonFormat3(CiriumTrackableStatus)
 }

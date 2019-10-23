@@ -110,6 +110,20 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
             None,
             None,
             None),
+          Option(CiriumDelays(
+            departureGateDelayMinutes = Option(5),
+            departureRunwayDelayMinutes = None,
+            arrivalGateDelayMinutes = Option(6),
+            arrivalRunwayDelayMinutes = None)),
+          Some(CiriumFlightDurations(
+            scheduledBlockMinutes = Some(115),
+            blockMinutes = None,
+            scheduledAirMinutes = None,
+            airMinutes = None,
+            scheduledTaxiOutMinutes = None,
+            taxiOutMinutes = None,
+            scheduledTaxiInMinutes = None,
+            taxiInMinutes = None)),
           List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
           Some(CiriumAirportResources(None, None, Some("A"), None, None)),
           Seq()))))
@@ -224,7 +238,10 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |                    "relationship": "L"
       |                }
       |            ],
-      |            "delays": {},
+      |            "delays": {
+      |                "departureGateDelayMinutes": 5,
+      |                "arrivalGateDelayMinutes": 6
+      |            },
       |            "flightDurations": {
       |                "scheduledBlockMinutes": 115
       |            },

@@ -3,6 +3,8 @@ package uk.gov.homeoffice.cirium.services.entities
 import akka.http.scaladsl.model.Uri
 import org.joda.time.DateTime
 
+//json Schema https://api.flightstats.com/flex/flightstatus/rest/v2/schema/json
+
 case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
   def uri = Uri(item)
 }
@@ -33,6 +35,22 @@ object CiriumDate {
 }
 
 case class CiriumCodeshare(fsCode: String, flightNumber: String, relationship: String)
+
+case class CiriumDelays(
+  departureGateDelayMinutes: Option[Int],
+  departureRunwayDelayMinutes: Option[Int],
+  arrivalGateDelayMinutes: Option[Int],
+  arrivalRunwayDelayMinutes: Option[Int])
+
+case class CiriumFlightDurations(
+  scheduledBlockMinutes: Option[Int],
+  blockMinutes: Option[Int],
+  scheduledAirMinutes: Option[Int],
+  airMinutes: Option[Int],
+  scheduledTaxiOutMinutes: Option[Int],
+  taxiOutMinutes: Option[Int],
+  scheduledTaxiInMinutes: Option[Int],
+  taxiInMinutes: Option[Int])
 
 case class CiriumFlightStatusUpdate(updatedAt: CiriumDate, source: String)
 
@@ -73,6 +91,8 @@ case class CiriumFlightStatus(
   arrivalDate: CiriumDate,
   status: String,
   operationalTimes: CiriumOperationalTimes,
+  delays: Option[CiriumDelays],
+  flightDurations: Option[CiriumFlightDurations],
   codeshares: Seq[CiriumCodeshare],
   airportResources: Option[CiriumAirportResources],
   flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
