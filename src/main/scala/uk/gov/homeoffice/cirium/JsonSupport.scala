@@ -2,7 +2,9 @@ package uk.gov.homeoffice.cirium
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.{ DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
+import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthSummary, RemovalDetails }
 import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.cirium.services.health.CiriumAppHealthSummary
 
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumRequestMetaJsonFormat: RootJsonFormat[CiriumItemId] = jsonFormat2(CiriumItemId)
@@ -18,8 +20,14 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumCodesharesJsonFormat: RootJsonFormat[CiriumCodeshare] = jsonFormat3(CiriumCodeshare)
   implicit val ciriumAirportResourcesJsonFormat: RootJsonFormat[CiriumAirportResources] = jsonFormat5(CiriumAirportResources)
   implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat16(CiriumFlightStatus)
-  implicit val ciriumFlightStatusResponseJsonFormat: RootJsonFormat[CiriumFlightStatusResponse] = jsonFormat2(CiriumFlightStatusResponse)
+  implicit val ciriumFlightStatusResponseJsonFormat: RootJsonFormat[CiriumFlightStatusResponseSuccess] = jsonFormat2(CiriumFlightStatusResponseSuccess)
   implicit val ciriumTrackableStatusJsonFormat: RootJsonFormat[CiriumTrackableStatus] = jsonFormat3(CiriumTrackableStatus)
+
+  implicit val ciriumFeedHealthStatusJsonFormat: RootJsonFormat[CiriumFeedHealthStatus] = jsonFormat3(CiriumFeedHealthStatus)
+  implicit val removalDetailsJsonFormat: RootJsonFormat[RemovalDetails] = jsonFormat3(RemovalDetails)
+  implicit val portFeedHealthSummaryJsonFormat: RootJsonFormat[PortFeedHealthSummary] = jsonFormat6(PortFeedHealthSummary)
+  implicit val ciriumAppHealthSummaryJsonFormat: RootJsonFormat[CiriumAppHealthSummary] = jsonFormat2(CiriumAppHealthSummary)
+
 }
 
 object CiriumDateProtocol extends DefaultJsonProtocol {

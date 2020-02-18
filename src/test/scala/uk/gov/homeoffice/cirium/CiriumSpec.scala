@@ -8,6 +8,7 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
@@ -15,9 +16,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
+  with SpecificationLike
+  with AfterEach {
   sequential
   isolated
+
+  override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "I should be able to connect to the feed and see what happens" >> {
     skipped("connectivity tester")
@@ -75,7 +80,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     val client = new MockClient(flightStatusResponse)
     val result = Await.result(client.requestItem("endpoint"), 1 second)
 
-    val expected = CiriumFlightStatusResponse(
+    val expected = CiriumFlightStatusResponseSuccess(
       CiriumRequestMetaData(
         "item",
         Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),

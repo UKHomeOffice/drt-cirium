@@ -3,13 +3,25 @@ package uk.gov.homeoffice.cirium.services.entities
 import akka.http.scaladsl.model.Uri
 import org.joda.time.DateTime
 
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Try
+
 //json Schema https://api.flightstats.com/flex/flightstatus/rest/v2/schema/json
 
 case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
   def uri = Uri(item)
 }
+trait CiriumFlightStatusResponse
 
-case class CiriumFlightStatusResponse(request: CiriumRequestMetaData, flightStatuses: Option[List[CiriumFlightStatus]])
+case class CiriumFlightStatusResponseSuccess(
+  request: CiriumRequestMetaData,
+  flightStatuses: Option[List[CiriumFlightStatus]]) extends CiriumFlightStatusResponse
+
+case class CiriumFlightStatusResponseFailure(
+  error: Throwable,
+  timestamp: Long = System.currentTimeMillis) extends CiriumFlightStatusResponse
 
 case class CiriumItemResponse(request: CiriumRequestMetaData, item: String)
 
@@ -97,4 +109,29 @@ case class CiriumFlightStatus(
   airportResources: Option[CiriumAirportResources],
   flightStatusUpdates: Seq[CiriumFlightStatusUpdate])
 
-case class CiriumTrackableStatus(status: CiriumFlightStatus, messageUri: String, processedMillis: Long)
+case class CiriumTrackableStatus(status: CiriumFlightStatus, messageUri: String, processedMillis: Long) {
+
+  def isInSync(threshold: FiniteDuration = 1 minute) = CiriumMessageFormat
+    .dateFromUri(messageUri)
+    .toOption
+    .exists(issueDate => processedMillis - threshold.toMillis < issueDate.getMillis)
+
+  def messageIssuedAt: Option[Long] = {
+    CiriumMessageFormat.dateFromUri(messageUri).toOption.map(_.getMillis)
+  }
+}
+
+object CiriumMessageFormat {
+
+  def dateFromUri(uri: String): Try[DateTime] = Try {
+
+    val dateBits = uri.split("json/").last.split("/").toList
+
+    dateBits match {
+      case year :: month :: day :: hour :: minute :: seconds :: _ =>
+        new DateTime(year.toInt, month.toInt, day.toInt, hour.toInt, minute.toInt, seconds.toInt)
+      case _ => throw new Exception(s"Url $uri is not parsable as a date-time.")
+    }
+  }
+
+}

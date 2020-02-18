@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium.services.feed
 
 import akka.NotUsed
-import akka.actor.{ Actor, ActorLogging, ActorSystem, Cancellable, Props }
+import akka.actor.{ Actor, ActorLogging, ActorSystem, Cancellable, Props, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -10,17 +10,32 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.scalalogging.Logger
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatusResponse, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatusResponse, CiriumFlightStatusResponseFailure, CiriumFlightStatusResponseSuccess, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+trait CiriumClientLike {
+  def initialRequest(): Future[CiriumInitialResponse]
+
+  def backwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse]
+
+  def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse]
+
+  def makeRequest(endpoint: String): Future[HttpResponse]
+
+  def sendReceive(uri: Uri): Future[HttpResponse]
+
+  def requestItem(endpoint: String): Future[CiriumFlightStatusResponse]
+
+}
+
 object Cirium {
   val log = Logger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) {
+  abstract case class Client(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends CiriumClientLike {
 
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -45,15 +60,25 @@ object Cirium {
       }).flatten
 
     def makeRequest(endpoint: String): Future[HttpResponse] = {
+      implicit val s: Scheduler = system.scheduler
+      Retry.retry(
+        sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
+        Retry.fibonacciDelay,
+        10,
+        5 seconds)
 
-      sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey"))
     }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
 
     def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint).map(res => {
       Unmarshal[HttpResponse](res)
-        .to[CiriumFlightStatusResponse]
+        .to[CiriumFlightStatusResponseSuccess]
+        .recover {
+          case error: Throwable =>
+            log.error(s"Error parsing Cirium response from $endpoint", error)
+            CiriumFlightStatusResponseFailure(error)
+        }
     }).flatten
   }
 
@@ -86,7 +111,7 @@ object Cirium {
     }
   }
 
-  case class Feed(client: Client, pollEveryMillis: Int)(implicit system: ActorSystem) {
+  case class Feed(client: CiriumClientLike, pollEveryMillis: Int)(implicit system: ActorSystem) {
     implicit val timeout = new Timeout(30 seconds)
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
@@ -128,7 +153,7 @@ object Cirium {
             client.requestItem(item)
           }
           .collect {
-            case CiriumFlightStatusResponse(meta, maybeFS) if maybeFS.isDefined =>
+            case CiriumFlightStatusResponseSuccess(meta, maybeFS) if maybeFS.isDefined =>
               val trackableFlights: immutable.Seq[CiriumTrackableStatus] = maybeFS.get.map { f =>
                 CiriumTrackableStatus(f, meta.url, System.currentTimeMillis)
               }
@@ -141,12 +166,11 @@ object Cirium {
     }
 
     def goBack(startItem: String, hops: Int = 4, step: Int = 1000): Future[String] = (0 until hops)
-      .foldLeft(
-        Future(startItem))(
-          (prev: Future[String], _) => prev.map(si => {
-            log.info(s"Going Back $step from $si")
-            client.backwards(si, step).map(r => r.items.head)
-          }).flatten)
+      .foldLeft(Future(startItem))(
+        (prev: Future[String], _) => prev.map(si => {
+          log.info(s"Going Back $step from $si")
+          client.backwards(si, step).map(r => r.items.head)
+        }).flatten)
   }
 
 }

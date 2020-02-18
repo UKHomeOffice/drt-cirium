@@ -7,17 +7,21 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
+import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
+  with SpecificationLike with AfterEach {
   sequential
   isolated
+
+  override def after: Unit = TestKit.shutdownActorSystem(system)
 
   class MockClient(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
 
@@ -44,6 +48,59 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  class MockClientWithFailures(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
+
+    val itemUriRegEx = "https://item/(\\d).+".r
+
+    var calls = 0
+
+    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+
+      endpoint.toString() match {
+        case "https://latest?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse))
+        case "https://current/previous/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, back1hop))
+        case "https://item/1/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward1))
+        case "https://item/3/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2))
+        case "https://item/5/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse))
+        case "https://item/5?appId=&appKey=" if calls == 0 =>
+          calls += 1
+          throw new Exception("Failed to connect")
+        case itemUriRegEx(itemId) =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponse(s"XX$itemId", itemId)))
+      }
+    }
+  }
+
+  class MockClientWithInvalidJson(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
+
+    val itemUriRegEx = "https://item/(\\d).+".r
+
+    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+
+      endpoint.toString() match {
+        case "https://latest?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse))
+        case "https://current/previous/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, back1hop))
+        case "https://item/1/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward1))
+        case "https://item/3/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2))
+        case "https://item/5/next/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse))
+        case "https://item/2?appId=&appKey=" =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, invalidJson))
+        case itemUriRegEx(itemId) =>
+          HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponse(s"XX$itemId", itemId)))
+      }
+    }
+  }
+
   "Given a stream of messages, each should end up in the correct port" >> {
 
     val client = new MockClient("https://latest")
@@ -55,7 +112,59 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
 
-    val result = feed.start(1, 2).map { source =>
+    feed.start(1, 2).map { source =>
+      source.runWith(Sink.actorRef(flightStatusActor, "complete"))
+    }
+
+    probe.fishForMessage(5 seconds) {
+      case CiriumTrackableStatus(s, _, _) if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX5" =>
+        true
+      case CiriumTrackableStatus(s, _, _) =>
+        println(s"Got this ${s.carrierFsCode}, ${s.arrivalAirportFsCode}")
+        false
+    }
+
+    success
+  }
+
+  "Given a network failure, the failed request should retry" >> {
+
+    val client = new MockClientWithFailures("https://latest")
+    val feed = Cirium.Feed(client, pollEveryMillis = 100)
+    val probe = TestProbe()
+
+    implicit val mat: ActorMaterializer = ActorMaterializer()
+
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
+
+    feed.start(1, 2).map { source =>
+      source.runWith(Sink.actorRef(flightStatusActor, "complete"))
+    }
+
+    probe.fishForMessage(5 seconds) {
+      case CiriumTrackableStatus(s, _, _) if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX5" =>
+        true
+      case CiriumTrackableStatus(s, _, _) =>
+        println(s"Got this ${s.carrierFsCode}, ${s.arrivalAirportFsCode}")
+        false
+    }
+
+    success
+  }
+
+  "Given an item with invalid json, and an item with valid json, I should see the valid item in the sink." >> {
+
+    val client = new MockClientWithInvalidJson("https://latest")
+    val feed = Cirium.Feed(client, pollEveryMillis = 100)
+    val probe = TestProbe()
+
+    implicit val mat: ActorMaterializer = ActorMaterializer()
+
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
+
+    feed.start(1, 2).map { source =>
       source.runWith(Sink.actorRef(flightStatusActor, "complete"))
     }
 
@@ -166,6 +275,30 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |}
     """.stripMargin
 
+  def invalidJson =
+    s"""
+       |{
+       |    "request": {
+       |        "endpoint": "1",
+       |        "itemId": {
+       |            "requested": "1",
+       |            "interpreted": "1"
+       |        },
+       |        "url": "https://item/1"
+       |    },
+       |    "flightStatuses": [
+       |        {
+       |            "flightId": 100000,
+       |            "carrierFsCode": "ERROR",
+       |            "operatingCarrierFsCode": "ERROR",
+       |            "primaryCarrierFsCode": "ERROR",
+       |            "flightStatusUpdates": [],
+       |            "irregularOperations": []
+       |        }
+       |    ]
+       |}
+    """.stripMargin
+
   def flightStatusResponse(carrierCode: String, item: String) =
     s"""
        |{
@@ -259,4 +392,3 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
        |}
     """.stripMargin
 }
-
