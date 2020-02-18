@@ -7,24 +7,24 @@ import com.typesafe.scalalogging.Logger
 import org.joda.time.DateTime
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetHealth
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetPortFeedHealthSummary
-import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthSummary }
+import uk.gov.homeoffice.cirium.actors.{CiriumFeedHealthStatus, PortFeedHealthSummary}
 import uk.gov.homeoffice.cirium.services.entities.CiriumMessageFormat
 import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 
 case class CiriumAppHealthSummary(
-  feedHealth: CiriumFeedHealthStatus,
-  portFeedHealthSummaries: Map[String, PortFeedHealthSummary])
+                                   feedHealth: CiriumFeedHealthStatus,
+                                   portFeedHealthSummaries: Map[String, PortFeedHealthSummary])
 
 object CiriumAppHealthSummaryConstructor {
   implicit lazy val timeout: Timeout = 3.seconds
 
   def apply(
-    flightStatusActor: ActorRef,
-    portActors: Map[String, ActorRef])(implicit executionContext: ExecutionContext): Future[CiriumAppHealthSummary] = {
+             flightStatusActor: ActorRef,
+             portActors: Map[String, ActorRef])(implicit executionContext: ExecutionContext): Future[CiriumAppHealthSummary] = {
     val askableFlightStatusActor: AskableActorRef = flightStatusActor
     val eventualHealthStatus: Future[CiriumFeedHealthStatus] = (askableFlightStatusActor ? GetHealth)
       .mapTo[CiriumFeedHealthStatus]
@@ -45,9 +45,9 @@ object CiriumAppHealthSummaryConstructor {
 }
 
 case class AppHealthCheck(
-  acceptableMessageLatency: FiniteDuration,
-  acceptableLostConnectivityDuration: FiniteDuration,
-  ciriumClient: CiriumClientLike, now: () => Long = () => System.currentTimeMillis)(implicit context: ExecutionContext) {
+                           acceptableMessageLatency: FiniteDuration,
+                           acceptableLostConnectivityDuration: FiniteDuration,
+                           ciriumClient: CiriumClientLike, now: () => Long = () => System.currentTimeMillis)(implicit context: ExecutionContext) {
   val log = Logger(getClass)
 
   def isHealthy(appHealthSummary: CiriumAppHealthSummary): Future[Boolean] = {
@@ -65,9 +65,10 @@ case class AppHealthCheck(
   }
 
   def isHealthy(
-    appHealthSummary: CiriumAppHealthSummary,
-    maybeLastProcessedMessageDateTime: Option[Long],
-    maybeLatestMessageTime: Option[DateTime]) = {
+                 appHealthSummary: CiriumAppHealthSummary,
+                 maybeLastProcessedMessageDateTime: Option[Long],
+                 maybeLatestMessageTime: Option[DateTime]
+               ) = {
     (maybeLatestMessageTime, maybeLastProcessedMessageDateTime) match {
       case (Some(latestAvailableMessage), Some(latestProcessedMessage)) =>
         val latency = latestAvailableMessage.getMillis - latestProcessedMessage
