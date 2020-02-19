@@ -50,7 +50,7 @@ class CiriumHealthSpec extends Specification {
 
   "When comparing the latest message received by our App to the latest one on the Cirium Feed" >> {
 
-    "Given a latest processed message the latest on Cirium " +
+    "Given a latest processed message is the same as the latest on Cirium " +
       "Then the app is healthy" >> {
         val nextItemUri = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
         val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(nextItemUri)
@@ -92,21 +92,6 @@ class CiriumHealthSpec extends Specification {
         val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
 
         result === true
-      }
-
-    "Given a last processed message that within the connectivity threshold and there is no connection to Cirium " +
-      "Then the app is healthy" >> {
-        val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 36)
-        val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
-
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly)
-
-        val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
-
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
-
-        result === false
       }
 
     "Given a last processed message that is older and outside the threshold then the app is not healthy" >> {

@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ ActorRef, ActorSystem, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
@@ -16,7 +16,7 @@ import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetReadines
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
-import uk.gov.homeoffice.cirium.services.feed.Cirium
+import uk.gov.homeoffice.cirium.services.feed.{ Cirium, Retry }
 import uk.gov.homeoffice.cirium.services.health.{ AppHealthCheck, CiriumAppHealthSummaryConstructor }
 
 import scala.concurrent.duration.{ Duration, _ }
@@ -31,6 +31,7 @@ object CiriumFlightStatusApp extends App {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit lazy val timeout: Timeout = 3.seconds
+  implicit val scheduler: Scheduler = system.scheduler
 
   lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes ~ appStatusRoutes
 
@@ -90,7 +91,12 @@ object CiriumFlightStatusApp extends App {
       concat(
         pathEnd {
           get {
-            complete(CiriumAppHealthSummaryConstructor(flightStatusActor, portActors))
+            val eventualSummary = Retry.retry(
+              CiriumAppHealthSummaryConstructor(flightStatusActor, portActors),
+              Retry.fibonacciDelay,
+              3,
+              1 second)
+            complete(eventualSummary)
           }
         },
         path("is-healthy") {
@@ -106,6 +112,10 @@ object CiriumFlightStatusApp extends App {
                   if (isHealthy)
                     HttpResponse(StatusCodes.NoContent)
                   else
+                    HttpResponse(StatusCodes.BadGateway)
+                }.recover {
+                  case exception: Exception =>
+                    log.error("Unable to check health data", exception)
                     HttpResponse(StatusCodes.BadGateway)
                 }
               })
