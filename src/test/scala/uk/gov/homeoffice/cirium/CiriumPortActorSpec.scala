@@ -7,6 +7,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.services.entities._
@@ -14,9 +15,13 @@ import uk.gov.homeoffice.cirium.services.entities._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
+  with SpecificationLike
+  with AfterEach {
   sequential
   isolated
+
+  override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "Flight statuses be deleted after a given period" >> {
     val portStatusActor = system.actorOf(
