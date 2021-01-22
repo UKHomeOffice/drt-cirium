@@ -3,7 +3,7 @@ package uk.gov.homeoffice.cirium
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.{ DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
 import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthSummary, RemovalDetails }
-import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse, _ }
 import uk.gov.homeoffice.cirium.services.health.CiriumAppHealthSummary
 
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
@@ -28,6 +28,9 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val portFeedHealthSummaryJsonFormat: RootJsonFormat[PortFeedHealthSummary] = jsonFormat6(PortFeedHealthSummary)
   implicit val ciriumAppHealthSummaryJsonFormat: RootJsonFormat[CiriumAppHealthSummary] = jsonFormat2(CiriumAppHealthSummary)
 
+  implicit val ciriumScheduledFlightsFormats = jsonFormat6(CiriumScheduledFlights)
+  implicit val ciriumScheduledResponseFormats = jsonFormat1(CiriumScheduledResponse)
+  implicit val ciriumScheduledArrivalRequestFormats = jsonFormat5(CiriumScheduledFlightRequest)
 }
 
 object CiriumDateProtocol extends DefaultJsonProtocol {
