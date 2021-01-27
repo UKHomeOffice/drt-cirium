@@ -6,7 +6,7 @@ pipeline:
     - /root/entrypoint.sh
     - sbt test publish docker:stage
     environment:
-    - ARTIFACTORY_USERNAME=nilesh.gupta@digital.homeoffice.gov.uk
+    - ARTIFACTORY_USERNAME=drt_artifactory_drone
     secrets:
     - ARTIFACTORY_PASSWORD
     when:
