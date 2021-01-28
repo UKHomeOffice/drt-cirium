@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.{ AskableActorRef, ask }
-import uk.gov.homeoffice.cirium.JsonSupport
+import uk.gov.homeoffice.cirium.{ AppEnvironment, JsonSupport }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses }
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
 
@@ -16,8 +16,6 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
 
   def portActors: Map[String, ActorRef]
 
-  def portCodes: Array[String]
-
   import JsonSupport._
 
   lazy val flightStatusRoutes: Route =
@@ -26,7 +24,7 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
         pathEnd {
           concat(
             get {
-              complete(Map("Available ports" -> portCodes))
+              complete(Map("Available ports" -> AppEnvironment.portCodes))
             })
         },
         path(Segment) { portCode =>

@@ -51,7 +51,7 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
       val scheduledArrival = CiriumScheduledFlightRequest("W9", 3797, 2021, 1, 21)
       val scheduledArrivalEntityF = Marshal[CiriumScheduledFlightRequest](scheduledArrival).to[MessageEntity]
       val scheduledArrivalEntity = Await.result(scheduledArrivalEntityF, 5 second)
-      Post("/flightScheduled", scheduledArrivalEntity) ~> flightScheduledRoute ~> check {
+      Get("/flightScheduled", scheduledArrivalEntity) ~> flightScheduledRoute ~> check {
         status mustEqual StatusCodes.OK
         val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondJson)).to[CiriumScheduledResponse]
         val result = Await.result(futureResult, 5 second)

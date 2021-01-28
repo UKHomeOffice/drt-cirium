@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.{ AskableActorRef, ask }
 import com.typesafe.scalalogging.Logger
-import uk.gov.homeoffice.cirium.JsonSupport
+import uk.gov.homeoffice.cirium.{ AppEnvironment, JsonSupport }
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetReadiness
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetStatuses
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
@@ -46,8 +46,8 @@ trait StatusRoutes extends CiriumBaseRoutes {
           concat(
             get {
               val healthChecker = AppHealthCheck(
-                sys.env.getOrElse("CIRIUM_MESSAGE_LATENCY_TOLERANCE_SECONDS", "60").toInt seconds,
-                sys.env.getOrElse("CIRIUM_LOST_CONNECTION_TOLERANCE_SECONDS", "300").toInt seconds,
+                AppEnvironment.cirium_message_latency_tolerance seconds,
+                AppEnvironment.cirium_lost_connect_tolerance seconds,
                 client)
 
               complete(CiriumAppHealthSummaryConstructor(flightStatusActor, portActors).flatMap { hs =>

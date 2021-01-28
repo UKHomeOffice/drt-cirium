@@ -18,7 +18,7 @@ trait FlightScheduledRoutes extends CiriumBaseRoutes {
 
   val flightScheduledRoute = pathPrefix("flightScheduled") {
     pathEndOrSingleSlash {
-      post {
+      get {
         entity(as[CiriumScheduledFlightRequest]) { csfRequest =>
           complete(
             client.makeRequest(s"$scheduleApiEndpoint/${csfRequest.flightCode}/${csfRequest.flightNumber}/departing/${csfRequest.year}/${csfRequest.month}/${csfRequest.day}")

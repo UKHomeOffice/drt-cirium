@@ -7,8 +7,9 @@ import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.Logger
+import uk.gov.homeoffice.cirium.AppEnvironment._
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
-import uk.gov.homeoffice.cirium.services.api.{ FlightStatusRoutes, FlightScheduledRoutes, StatusRoutes }
+import uk.gov.homeoffice.cirium.services.api.{ FlightScheduledRoutes, FlightStatusRoutes, StatusRoutes }
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.duration.Duration
@@ -16,19 +17,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success }
 
-trait Environment {
-
-  val goBackHops = sys.env.getOrElse("CIRIUM_GO_BACK_X_1000", "5").toInt
-
-  val portCodes: Array[String] = sys.env("PORT_CODES").split(",")
-
-  val pollMillis = sys.env.getOrElse("CIRIUM_POLL_MILLIS", "5000").toInt
-
-  val statusRetentionDurationHours = sys.env.getOrElse("CIRIUM_STATUS_RETENTION_DURATION_HOURS", "24").toInt
-
-}
-
-object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRoutes with FlightScheduledRoutes with Environment {
+object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRoutes with FlightScheduledRoutes {
   private val log = Logger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
@@ -45,9 +34,9 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
     .actorOf(CiriumFlightStatusRouterActor.props(portActors), "flight-status-actor")
 
   val client: Cirium.ProdClient = new Cirium.ProdClient(
-    sys.env("CIRIUM_APP_ID"),
-    sys.env("CIRIUM_APP_KEY"),
-    sys.env("CIRIUM_APP_ENTRY_POINT"))
+    cirium_app_Id,
+    cirium_app_key,
+    cirium_app_entry_point)
 
   val feed = Cirium.Feed(client, pollEveryMillis = pollMillis)
 
