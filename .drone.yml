@@ -1,12 +1,12 @@
 pipeline:
 
   build:
-    image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt:v0.3.1
     commands:
     - /root/entrypoint.sh
     - sbt test publish docker:stage
     environment:
-    - ARTIFACTORY_USERNAME=drt_artifactory
+    - ARTIFACTORY_USERNAME=drt_artifactory_drone
     secrets:
     - ARTIFACTORY_PASSWORD
     when:
