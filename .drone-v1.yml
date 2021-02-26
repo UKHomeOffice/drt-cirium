@@ -8,7 +8,6 @@ platform:
   arch: amd64
 
 steps:
-
 - name: build
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/scala-sbt:latest
@@ -16,9 +15,12 @@ steps:
     - /root/entrypoint.sh
     - sbt docker:stage
   environment:
+#    ARTIFACTORY_PASSWORD:
+#      from_secret: ARTIFACTORY_TOKEN
+#    ARTIFACTORY_USERNAME: ben.eppel@digital.homeoffice.gov.uk
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_TOKEN
-    ARTIFACTORY_USERNAME: ben.eppel@digital.homeoffice.gov.uk
+    ARTIFACTORY_USERNAME: drt_artifactory_drone
   when:
     event:
     - push
@@ -42,3 +44,5 @@ steps:
       - push
 
 ...
+
+
