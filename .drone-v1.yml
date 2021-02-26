@@ -15,12 +15,9 @@ steps:
     - /root/entrypoint.sh
     - sbt docker:stage
   environment:
-#    ARTIFACTORY_PASSWORD:
-#      from_secret: ARTIFACTORY_TOKEN
-#    ARTIFACTORY_USERNAME: ben.eppel@digital.homeoffice.gov.uk
     ARTIFACTORY_PASSWORD:
-      from_secret: ARTIFACTORY_TOKEN
-    ARTIFACTORY_USERNAME: drt_artifactory_drone
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: drt_artifactory_ci
   when:
     event:
     - push
