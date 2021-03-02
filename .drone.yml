@@ -8,7 +8,7 @@ pipeline:
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD
-    ARTIFACTORY_USERNAME: drt_artifactory_drone
+    ARTIFACTORY_USERNAME: drt-artifactory-ci
     when:
       event:
       - push
