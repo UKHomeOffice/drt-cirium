@@ -5,10 +5,10 @@ pipeline:
     commands:
     - /root/entrypoint.sh
     - sbt test publish docker:stage
-  environment:
-    ARTIFACTORY_PASSWORD:
-      from_secret: ARTIFACTORY_PASSWORD
-    ARTIFACTORY_USERNAME: drt-artifactory-ci
+    environment:
+    - ARTIFACTORY_USERNAME=drt_artifactory_drone
+    secrets:
+    - ARTIFACTORY_PASSWORD
     when:
       event:
       - push
