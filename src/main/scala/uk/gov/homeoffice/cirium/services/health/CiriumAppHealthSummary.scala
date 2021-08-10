@@ -3,8 +3,8 @@ package uk.gov.homeoffice.cirium.services.health
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import com.typesafe.scalalogging.Logger
 import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetHealth
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetPortFeedHealthSummary
 import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthSummary }
@@ -48,7 +48,7 @@ case class AppHealthCheck(
   acceptableMessageLatency: FiniteDuration,
   acceptableLostConnectivityDuration: FiniteDuration,
   ciriumClient: CiriumClientLike, now: () => Long = () => System.currentTimeMillis)(implicit context: ExecutionContext) {
-  val log = Logger(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
 
   def isHealthy(appHealthSummary: CiriumAppHealthSummary): Future[Boolean] = {
     val maybeLastProcessedMessageDateTime: Option[Long] = appHealthSummary

@@ -1,15 +1,15 @@
 package uk.gov.homeoffice.cirium.services.feed
 
 import akka.actor.Scheduler
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 import akka.pattern.after
+import org.slf4j.{ Logger, LoggerFactory }
 
 object Retry {
-  val log = Logger(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
   val fibonacciDelay: Stream[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacciDelay zip fibonacciDelay.tail)
     .map { t => t._1 + t._2 }
 

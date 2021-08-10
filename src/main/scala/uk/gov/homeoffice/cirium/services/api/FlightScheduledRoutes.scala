@@ -3,7 +3,7 @@ package uk.gov.homeoffice.cirium.services.api
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse }
 
 import scala.concurrent.Future
@@ -12,7 +12,7 @@ trait FlightScheduledRoutes extends CiriumBaseRoutes {
 
   import uk.gov.homeoffice.cirium.JsonSupport._
 
-  val logger = Logger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   val scheduleApiEndpoint = "https://api.flightstats.com/flex/schedules/rest/v1/json/flight"
 

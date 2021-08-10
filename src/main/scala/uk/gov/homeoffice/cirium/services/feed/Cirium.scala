@@ -9,7 +9,7 @@ import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatusResponse, CiriumFlightStatusResponseFailure, CiriumFlightStatusResponseSuccess, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
 
 import scala.collection.immutable
@@ -33,7 +33,7 @@ trait CiriumClientLike {
 }
 
 object Cirium {
-  val log = Logger(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
 
   abstract case class Client(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends CiriumClientLike {
 

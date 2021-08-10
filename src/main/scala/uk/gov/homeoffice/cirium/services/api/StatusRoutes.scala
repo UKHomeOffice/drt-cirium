@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.{ AskableActorRef, ask }
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.{ AppEnvironment, JsonSupport }
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetReadiness
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetStatuses
@@ -27,7 +27,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
 
   def flightStatusActor: ActorRef
 
-  private val logger = Logger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   lazy val appStatusRoutes: Route =
     pathPrefix("app-details") {

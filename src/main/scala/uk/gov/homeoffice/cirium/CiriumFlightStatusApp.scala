@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.AppEnvironment._
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.api.{ FlightScheduledRoutes, FlightStatusRoutes, StatusRoutes }
@@ -18,7 +18,7 @@ import scala.language.postfixOps
 import scala.util.{ Failure, Success }
 
 object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRoutes with FlightScheduledRoutes {
-  private val log = Logger(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
   implicit val mat: ActorMaterializer = ActorMaterializer()
