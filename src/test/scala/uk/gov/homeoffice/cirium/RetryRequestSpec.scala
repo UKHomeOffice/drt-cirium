@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterEach
+import org.specs2.specification.AfterAll
 import uk.gov.homeoffice.cirium.services.feed.Retry
 
 import scala.concurrent.duration._
@@ -12,19 +12,19 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
-  with AfterEach {
+  with AfterAll {
 
   implicit val s: Scheduler = system.scheduler
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def after: Unit = TestKit.shutdownActorSystem(system)
+  override def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
   "Given a function that returns a future, if it succeeds, should get the result" >> {
 
-    def delayedResult = () => Future("Yes")
+    def delayedResult: () => Future[String] = () => Future("Yes")
 
-    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 0, 1 second)
-    val result = Await.result(futureResult, 1 second)
+    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 0, 1.second)
+    val result = Await.result(futureResult, 1.second)
 
     result === "Yes"
   }
@@ -36,9 +36,9 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
       "Yes"
     }
 
-    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 0, 1 second)
+    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 0, 1.second)
 
-    Await.result(futureResult, 1 second) must throwA[Exception]
+    Await.result(futureResult, 1.second) must throwA[Exception]
   }
 
   "Given a function that returns a future, if it fails first and then succeeds, we should get the success" >> {
@@ -53,14 +53,13 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
         "Yes"
     }
 
-    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 1, 1 second)
-    val result = Await.result(futureResult, 5 second)
+    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 1, 1.second)
+    val result = Await.result(futureResult, 5.second)
 
     result === "Yes"
   }
 
   "Given a function that returns a future, if it fails twice and then succeeds, we should get the success" >> {
-
     var calledTimes = 0
 
     def delayedResult = () => Future {
@@ -71,8 +70,8 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
         "Yes"
     }
 
-    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 3, 1 second)
-    val result = Await.result(futureResult, 5 second)
+    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 3, 1.second)
+    val result = Await.result(futureResult, 5.second)
 
     result === "Yes"
   }
@@ -89,9 +88,9 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
         "Yes"
     }
 
-    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 1, 1 second)
+    val futureResult = Retry.retry(delayedResult(), Retry.fibonacciDelay, 1, 1.second)
 
-    Await.result(futureResult, 1 second) must throwA[Exception]
+    Await.result(futureResult, 1.second) must throwA[Exception]
   }
 
 }

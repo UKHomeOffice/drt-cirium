@@ -3,7 +3,7 @@ package uk.gov.homeoffice.cirium
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.pattern.pipe
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
@@ -23,6 +23,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   isolated
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
+  implicit val mat: Materializer = Materializer.createMaterializer(system)
 
   "I should be able to connect to the feed and see what happens" >> {
     skipped("connectivity tester")
@@ -31,17 +32,15 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"))
-    val feed = new Cirium.Feed(client, pollEveryMillis = 100)
+    val feed = Cirium.Feed(client, pollEveryMillis = 100)
     val probe = TestProbe()
 
-    implicit val mat: ActorMaterializer = ActorMaterializer()
-
-    val result = feed.start(5).map { source =>
+    feed.start(5, 1000).map { source =>
       source.runWith(Sink.seq).pipeTo(probe.ref)
     }
 
-    probe.fishForMessage(10 minutes) {
-      case x => false
+    probe.fishForMessage(10.minutes) {
+      case _ => false
     }
     true
   }
@@ -49,7 +48,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   "I should be able to parse to the initial response" >> {
 
     val client = new MockClient(initialResponse)
-    val result = Await.result(client.initialRequest(), 1 second)
+    val result = Await.result(client.initialRequest(), 1.second)
 
     val expected = CiriumInitialResponse(
       CiriumRequestMetaData("latest", None, None, "https://endpoint/rest/v2/json/latest"),
@@ -60,7 +59,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   "I should be able to parse to the item list response" >> {
 
     val client = new MockClient(itemListResponse)
-    val result = Await.result(client.backwards("test", 2), 1 second)
+    val result = Await.result(client.backwards("test", 2), 1.second)
 
     val expected = CiriumItemListResponse(
       CiriumRequestMetaData(
@@ -78,7 +77,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   "I should be able to parse a flight status response" >> {
 
     val client = new MockClient(flightStatusResponse)
-    val result = Await.result(client.requestItem("endpoint"), 1 second)
+    val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
       CiriumRequestMetaData(
@@ -136,7 +135,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     result === expected
   }
 
-  val initialResponse: String =
+  def initialResponse: String =
     """
       |{
       |    "request": {
@@ -147,7 +146,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |}
     """.stripMargin
 
-  val itemListResponse: String =
+  def itemListResponse: String =
     """
       |{
       |    "request": {
@@ -169,7 +168,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |}
     """.stripMargin
 
-  val flightStatusResponse: String =
+  def flightStatusResponse: String =
     """
       |{
       |    "request": {
@@ -267,9 +266,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 }
 
 class MockClient(mockResponse: String)(implicit system: ActorSystem) extends Cirium.Client("", "", "") {
-
   def sendReceive(endpoint: Uri): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }
 }
-

@@ -40,13 +40,17 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   val feed = Cirium.Feed(client, pollEveryMillis = pollMillis)
 
-  feed.start(goBackHops).map(source => {
+  val totalBackwards = 50000
+  val stepSize = 2000
+  val hops = (50000.toDouble / stepSize).toInt
+
+  feed.start(hops, step = stepSize).map(source => {
     source.runWith(Sink.actorRef(flightStatusActor, "complete"))
   })
 
   lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes ~ appStatusRoutes ~ flightScheduledRoute
 
-  val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "0.0.0.0", 8080)
+  val serverBinding: Future[Http.ServerBinding] = Http().newServerAt("0.0.0.0", 8080).bind(routes)
 
   serverBinding.onComplete {
     case Success(bound) =>

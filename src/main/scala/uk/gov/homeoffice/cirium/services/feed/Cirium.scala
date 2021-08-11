@@ -6,16 +6,18 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatusResponse, CiriumFlightStatusResponseFailure, CiriumFlightStatusResponseSuccess, CiriumInitialResponse, CiriumItemListResponse, CiriumTrackableStatus }
+import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.matching.Regex
 
 trait CiriumClientLike {
   def initialRequest(): Future[CiriumInitialResponse]
@@ -37,27 +39,29 @@ object Cirium {
 
   abstract case class Client(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends CiriumClientLike {
 
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
     import uk.gov.homeoffice.cirium.JsonSupport._
 
     def initialRequest(): Future[CiriumInitialResponse] = makeRequest(entryPoint).map(res => Unmarshal[HttpResponse](res)
       .to[CiriumInitialResponse]).flatten
 
-    def backwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
+    def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
       makeRequest(latestItemLocation + s"/previous/$step")
-        .map(res => Unmarshal[HttpResponse](res)
-          .to[CiriumItemListResponse]).flatten
-
-    def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] = makeRequest(latestItemLocation + s"/next/$step")
-      .map(res => {
-        val futureStatusResponse: Future[CiriumItemListResponse] = Unmarshal[HttpResponse](res)
-          .to[CiriumItemListResponse]
-        futureStatusResponse.map { statusResponse =>
-          log.info(s"Requested next $step from $latestItemLocation and got ${statusResponse.items.size}")
+        .flatMap { res =>
+          Unmarshal[HttpResponse](res).to[CiriumItemListResponse]
         }
-        futureStatusResponse
-      }).flatten
+
+    def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
+      makeRequest(latestItemLocation + s"/next/$step")
+        .map { res =>
+          val futureStatusResponse = Unmarshal[HttpResponse](res).to[CiriumItemListResponse]
+          futureStatusResponse.foreach { statusResponse =>
+            log.info(s"Requested next $step from $latestItemLocation and got ${statusResponse.items.size}")
+          }
+          futureStatusResponse
+        }
+        .flatten
 
     def makeRequest(endpoint: String): Future[HttpResponse] = {
       implicit val s: Scheduler = system.scheduler
@@ -65,8 +69,7 @@ object Cirium {
         sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
         Retry.fibonacciDelay,
         10,
-        5 seconds)
-
+        5.seconds)
     }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
@@ -112,65 +115,93 @@ object Cirium {
   }
 
   case class Feed(client: CiriumClientLike, pollEveryMillis: Int)(implicit system: ActorSystem) {
-    implicit val timeout = new Timeout(30 seconds)
+    implicit val timeout: Timeout = new Timeout(5.seconds)
 
     val askableLatestItemActor: AskableActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(goBackHops: Int = 0, step: Int = 1000): Future[Source[CiriumTrackableStatus, Cancellable]] = {
+    def start(goBackHops: Int = 0, step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] = {
       val startingPoint = client
         .initialRequest()
-        .map(crp => goBack(crp.item, goBackHops, step))
-        .flatten
+        .flatMap(crp => goBack(crp.item, goBackHops, step))
 
       tick(startingPoint, step)
     }
 
     def tick(start: Future[String], step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] = {
-
-      start.map(s => askableLatestItemActor ? LatestItem(s)).map { _ =>
-        val tickingSource: Source[CiriumTrackableStatus, Cancellable] = Source
-          .tick(1 milli, pollEveryMillis millis, NotUsed)
-          .mapAsync(1)(_ => {
-            (askableLatestItemActor ? Ask).map {
-              case LatestItem(endpoint) => endpoint
-              case _ => None
-            }
-          })
-          .collect {
-            case Some(s) => s
-          }
-          .mapAsync(1)(s => {
-            client.forwards(s, step).flatMap(r => {
-              if (r.items.nonEmpty) {
-                (askableLatestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
-              } else {
-                Future(List())
+      start
+        .map(s => askableLatestItemActor ? LatestItem(s))
+        .map { _ =>
+          val tickingSource: Source[CiriumTrackableStatus, Cancellable] = Source
+            .tick(1.milliseconds, pollEveryMillis.milliseconds, NotUsed)
+            .mapAsync(1)(_ => {
+              (askableLatestItemActor ? Ask).map {
+                case LatestItem(endpoint) => endpoint
+                case _ => None
               }
             })
-          })
-          .mapConcat(identity)
-          .mapAsync(20) { item =>
-            client.requestItem(item)
-          }
-          .collect {
-            case CiriumFlightStatusResponseSuccess(meta, maybeFS) if maybeFS.isDefined =>
-              val trackableFlights: immutable.Seq[CiriumTrackableStatus] = maybeFS.get.map { f =>
-                CiriumTrackableStatus(f, meta.url, System.currentTimeMillis)
-              }
-              trackableFlights
-          }
-          .mapConcat(identity)
+            .collect {
+              case Some(s) => s
+            }
+            .mapAsync(1)(s => {
+              client.forwards(s, step).flatMap(r => {
+                if (r.items.nonEmpty) {
+                  (askableLatestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
+                } else {
+                  Future(List())
+                }
+              })
+            })
+            .mapConcat(identity)
+            .mapAsync(20) { item =>
+              client.requestItem(item)
+            }
+            .collect {
+              case CiriumFlightStatusResponseSuccess(meta, maybeFS) if maybeFS.isDefined =>
+                val trackableFlights: immutable.Seq[CiriumTrackableStatus] = maybeFS.get.map { f =>
+                  CiriumTrackableStatus(f, meta.url, System.currentTimeMillis)
+                }
+                trackableFlights
+            }
+            .mapConcat(identity)
 
-        tickingSource
-      }
+          tickingSource
+        }
     }
 
-    def goBack(startItem: String, hops: Int = 4, step: Int = 1000): Future[String] = (0 until hops)
+    //    val regex = "2021/08/10/06/53/29/860/AJ4cq7".r
+    val regex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
+
+    def goBack(startItem: String, hops: Int, step: Int): Future[String] = (0 until hops)
       .foldLeft(Future(startItem))(
-        (prev: Future[String], _) => prev.map(si => {
-          log.info(s"Going Back $step from $si")
-          client.backwards(si, step).map(r => r.items.head)
-        }).flatten)
+        (prev: Future[String], _) =>
+          prev.flatMap { si =>
+            log.info(s"Going Back $step from $si")
+            client.backwards(si, step).map { r =>
+              val next = r.items.head
+              val date = next match {
+                case regex(y, m, d, h, min) =>
+                  val dateTime = new DateTime(y.toInt, m.toInt, d.toInt, h.toInt, min.toInt)
+                  val now = new DateTime()
+                  //                  val timeDiff = 2 * 24 * 60 * 60000
+                  val timeDiff = 7 * 60 * 60000
+                  val ago = now.getMillis - dateTime.getMillis
+                  if (ago > timeDiff) {
+                    println(s"date ${dateTime.toDateTimeISO} is far enough")
+                  } else
+                    println(s"date ${dateTime.toDateTimeISO} is not far enough (${ago / 60000} minutes ago)")
+
+                  val dateStr = Option(s"$y-$m-$d")
+                case _ => None
+              }
+              println(s"backwards yielded $next")
+              next
+            }
+              .recover {
+                case t =>
+                  println(s"failed to go backwards: ${t.toString}")
+                  throw new Exception(s"Damn")
+              }
+          })
   }
 
 }

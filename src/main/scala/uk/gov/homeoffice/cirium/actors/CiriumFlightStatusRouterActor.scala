@@ -50,7 +50,6 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       sender() ! CiriumFeedHealthStatus(isReady, lastMessage, upTimeSeconds)
 
     case ts: CiriumTrackableStatus =>
-
       if (!isReady && ts.isInSync()) {
         isReady = true
         log.info(s"Finished cirium backlog after ${upTimeSeconds} seconds.")
