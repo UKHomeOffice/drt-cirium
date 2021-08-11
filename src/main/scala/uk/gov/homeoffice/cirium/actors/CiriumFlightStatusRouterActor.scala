@@ -1,15 +1,10 @@
 package uk.gov.homeoffice.cirium.actors
 
-import java.lang.management.ManagementFactory
-
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import akka.pattern.AskableActorRef
-import akka.util.Timeout
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor._
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetPortFeedHealthSummary
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 
-import scala.concurrent.duration._
+import java.lang.management.ManagementFactory
 import scala.language.postfixOps
 import scala.util.Failure
 
@@ -60,10 +55,14 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       val portCodeForUpdate = ts.status.arrivalAirportFsCode
       portActors.get(portCodeForUpdate).foreach(_ ! ts)
 
-    case Failure(e) =>
-      log.error(s"Got an exception", e)
+    case Failure(t) =>
+      log.error(t, s"Got a failure")
+
+    case akka.actor.Status.Failure(t) =>
+      log.error(t, s"Got a failure")
+
     case other =>
-      log.error(s"Got this unexpected message ${other}")
+      log.error(s"Got this unexpected message (${other.getClass}) $other")
   }
 
 }

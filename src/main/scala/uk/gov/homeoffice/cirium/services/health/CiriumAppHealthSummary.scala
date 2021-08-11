@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium.services.health
 
 import akka.actor.ActorRef
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -11,9 +11,8 @@ import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthS
 import uk.gov.homeoffice.cirium.services.entities.CiriumMessageFormat
 import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
 
 case class CiriumAppHealthSummary(
   feedHealth: CiriumFeedHealthStatus,
@@ -25,22 +24,19 @@ object CiriumAppHealthSummaryConstructor {
   def apply(
     flightStatusActor: ActorRef,
     portActors: Map[String, ActorRef])(implicit executionContext: ExecutionContext): Future[CiriumAppHealthSummary] = {
-    val askableFlightStatusActor: AskableActorRef = flightStatusActor
-    val eventualHealthStatus: Future[CiriumFeedHealthStatus] = (askableFlightStatusActor ? GetHealth)
+    val eventualHealthStatus: Future[CiriumFeedHealthStatus] = (flightStatusActor ? GetHealth)
       .mapTo[CiriumFeedHealthStatus]
     val eventualPortSummaries: Future[Map[String, PortFeedHealthSummary]] = Future.sequence(portActors.map {
       case (portCode, portActor) =>
-        val askableActorRef: AskableActorRef = portActor
-        (askableActorRef.ask(GetPortFeedHealthSummary)(Timeout(1 second)))
+        portActor
+          .ask(GetPortFeedHealthSummary)(Timeout(1.second))
           .mapTo[PortFeedHealthSummary].map(portCode -> _)
     }).map(_.toMap)
 
-    val futureAppHealth = for {
+    for {
       healthStatus <- eventualHealthStatus
       portSummaries <- eventualPortSummaries
-
-    } yield (CiriumAppHealthSummary(healthStatus, portSummaries))
-    futureAppHealth
+    } yield CiriumAppHealthSummary(healthStatus, portSummaries)
   }
 }
 
@@ -56,18 +52,23 @@ case class AppHealthCheck(
       .lastMessage
       .flatMap(_.messageIssuedAt)
 
-    latestMessageDateTime(appHealthSummary).map(maybeLatestMessageTime => {
-
+    latestMessageDateTime().map(maybeLatestMessageTime => {
       val appIsStillCatchingUp = !appHealthSummary.feedHealth.isReady
+      val withinHealthThresholds = isWithinHealthThresholds(appHealthSummary, maybeLastProcessedMessageDateTime, maybeLatestMessageTime)
 
-      appIsStillCatchingUp || isWithinHealthThresholds(appHealthSummary, maybeLastProcessedMessageDateTime, maybeLatestMessageTime)
+      val isHealthy = appIsStillCatchingUp || withinHealthThresholds
+
+      if (!isHealthy)
+        log.warn(s"Not healthy. Still catching up: $appIsStillCatchingUp. Within health thresholds: $withinHealthThresholds")
+
+      isHealthy
     })
   }
 
   def isWithinHealthThresholds(
     appHealthSummary: CiriumAppHealthSummary,
     maybeLastProcessedMessageDateTime: Option[Long],
-    maybeLatestMessageTime: Option[DateTime]) = {
+    maybeLatestMessageTime: Option[DateTime]): Boolean = {
     (maybeLatestMessageTime, maybeLastProcessedMessageDateTime) match {
       case (Some(latestAvailableMessage), Some(latestProcessedMessage)) =>
         val latency = latestAvailableMessage.getMillis - latestProcessedMessage
@@ -95,14 +96,15 @@ case class AppHealthCheck(
     }
   }
 
-  def latestMessageDateTime(appHealthSummary: CiriumAppHealthSummary): Future[Option[DateTime]] = ciriumClient
-    .initialRequest()
-    .map(res => {
-      CiriumMessageFormat.dateFromUri(res.item).toOption
-    })
-    .recover {
-      case e: Throwable =>
-        log.error("Failed to connect to cirium", e)
-        None
-    }
+  def latestMessageDateTime(): Future[Option[DateTime]] =
+    ciriumClient
+      .initialRequest()
+      .map(res => {
+        CiriumMessageFormat.dateFromUri(res.item).toOption
+      })
+      .recover {
+        case e: Throwable =>
+          log.error("Failed to connect to cirium", e)
+          None
+      }
 }

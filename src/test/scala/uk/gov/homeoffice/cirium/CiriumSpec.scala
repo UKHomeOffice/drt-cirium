@@ -10,11 +10,15 @@ import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.cirium.services.feed.Cirium
+import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategy, Cirium }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
+
+case class MockBackwardsStrategy(url: String) extends BackwardsStrategy {
+  override def backUntil(startItem: String): Future[String] = Future.successful(url)
+}
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
@@ -32,10 +36,10 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"))
-    val feed = Cirium.Feed(client, pollEveryMillis = 100)
+    val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
-    feed.start(5, 1000).map { source =>
+    feed.start(1000).map { source =>
       source.runWith(Sink.seq).pipeTo(probe.ref)
     }
 

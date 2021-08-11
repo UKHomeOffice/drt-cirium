@@ -2,6 +2,7 @@ package uk.gov.homeoffice.cirium.services.api
 
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse }
@@ -16,7 +17,7 @@ trait FlightScheduledRoutes extends CiriumBaseRoutes {
 
   val scheduleApiEndpoint = "https://api.flightstats.com/flex/schedules/rest/v1/json/flight"
 
-  val flightScheduledRoute = pathPrefix("flightScheduled") {
+  val flightScheduledRoute: Route = pathPrefix("flightScheduled") {
     pathEndOrSingleSlash {
       get {
         entity(as[CiriumScheduledFlightRequest]) { csfRequest =>

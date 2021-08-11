@@ -4,15 +4,16 @@ import akka.actor.{ ActorRef, ActorSystem, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
+import akka.stream.{ ActorMaterializer, Materializer }
 import akka.stream.scaladsl.Sink
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.AppEnvironment._
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.api.{ FlightScheduledRoutes, FlightStatusRoutes, StatusRoutes }
-import uk.gov.homeoffice.cirium.services.feed.Cirium
+import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategyImpl, Cirium }
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success }
@@ -21,7 +22,7 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
   private val log = LoggerFactory.getLogger(getClass)
 
   implicit val system: ActorSystem = ActorSystem("cirium-flight-status-system")
-  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val mat: Materializer = Materializer.createMaterializer(system)
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit val scheduler: Scheduler = system.scheduler
 
@@ -38,14 +39,15 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
     cirium_app_key,
     cirium_app_entry_point)
 
-  val feed = Cirium.Feed(client, pollEveryMillis = pollMillis)
+  val millis = 48.hours.toMillis
+  val targetTime = new DateTime().minus(millis)
 
-  val totalBackwards = 50000
-  val stepSize = 2000
-  val hops = (50000.toDouble / stepSize).toInt
+  val feed = Cirium.Feed(client, pollEveryMillis = pollMillis, BackwardsStrategyImpl(client, targetTime))
 
-  feed.start(hops, step = stepSize).map(source => {
-    source.runWith(Sink.actorRef(flightStatusActor, "complete"))
+  val stepSize = 1000
+
+  feed.start(step = stepSize).map(source => {
+    source.runWith(Sink.actorRef(flightStatusActor, "complete", t => log.error("Failure", t)))
   })
 
   lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes ~ appStatusRoutes ~ flightScheduledRoute

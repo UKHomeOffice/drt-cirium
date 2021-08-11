@@ -6,6 +6,7 @@ import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.util.Failure
 
 object CiriumPortStatusActor {
 
@@ -49,7 +50,7 @@ class CiriumPortStatusActor(
 
   val expireAfterMillis: Long = hoursOfHistory * 60 * 60 * 1000
 
-  timers.startPeriodicTimer(TickKey, RemoveExpired, 1 minutes)
+  timers.startTimerAtFixedRate(TickKey, RemoveExpired, 10.seconds)
 
   def receive: Receive = {
 
@@ -105,7 +106,10 @@ class CiriumPortStatusActor(
       trackableStatuses(s.status.flightId) = s
       latestStatus = Option(s)
 
+    case Failure(t) =>
+      log.error(t, s"Got a failure")
+
     case other =>
-      log.error(s"Got this unexpected message ${other}")
+      log.error(s"Got this unexpected message $other")
   }
 }
