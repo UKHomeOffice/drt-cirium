@@ -50,7 +50,7 @@ class CiriumPortStatusActor(
 
   val expireAfterMillis: Long = hoursOfHistory * 60 * 60 * 1000
 
-  timers.startTimerAtFixedRate(TickKey, RemoveExpired, 10.seconds)
+  timers.startTimerAtFixedRate(TickKey, RemoveExpired, 60.seconds)
 
   def receive: Receive = {
 
@@ -97,7 +97,7 @@ class CiriumPortStatusActor(
 
       val removals = RemovalDetails(System.currentTimeMillis(), forRemoval.size, trackableStatuses.size)
 
-      log.info(s"Removing ${removals.totalRemoved} expired flight statuses out of ${removals.remainingAfterRemoval}")
+      log.info(s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining")
 
       removalDetails = Option(removals)
       trackableStatuses --= forRemoval

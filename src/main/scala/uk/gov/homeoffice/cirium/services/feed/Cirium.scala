@@ -186,15 +186,14 @@ case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime)
   def backUntil(startItem: String): Future[String] = {
     client.backwards(startItem, 1000).flatMap { c =>
       val firstItem = c.items.head
-      println(s"in backwards: ${c.items.head}")
       firstItem match {
         case dateFromUrlRegex(y, m, d, h, min) =>
           val dateTime = new DateTime(y.toInt, m.toInt, d.toInt, h.toInt, min.toInt)
           if (dateTime.getMillis <= targetTime.getMillis) {
-            println(s"date ${dateTime.toDateTimeISO} is far enough")
+            log.info(s"Reached back to ${dateTime.toDateTimeISO}. Will start processing forwards now")
             Future.successful(firstItem)
           } else {
-            println(s"date ${dateTime.toDateTimeISO} is not far enough (>= ${targetTime.toDateTimeISO})")
+            log.info(s"Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}")
             backUntil(firstItem)
           }
         case _ =>
