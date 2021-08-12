@@ -2,7 +2,7 @@ lazy val akkaHttpVersion = "10.2.6"
 lazy val akkaVersion = "2.6.8"
 lazy val specs2 = "4.6.0"
 lazy val jodaTime = "2.9.4"
-lazy val logBackClassicVersion = "1.1.3"
+lazy val logBackClassicVersion = "1.2.3"
 lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.10.0"
 
@@ -23,6 +23,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "ch.qos.logback" % "logback-classic" % logBackClassicVersion,
       "joda-time" % "joda-time" % jodaTime,
 
       "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
