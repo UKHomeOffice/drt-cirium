@@ -60,7 +60,7 @@ object Cirium {
           eventualResponse.onComplete {
             case Success(v) => v
             case Failure(exception) =>
-              log.error(s"1Error parsing Cirium response from $uri. Response was ${Await.result(res.entity.dataBytes.runFold("") { case (a, b) => a + b.utf8String }, 1.second)}", exception)
+              log.error(s"Error parsing Cirium response from $uri. Response was ${Await.result(res.entity.dataBytes.runFold("") { case (a, b) => a + b.utf8String }, 1.second)}", exception)
               Future.failed(exception)
           }
           eventualResponse
