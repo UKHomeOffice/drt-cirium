@@ -1,7 +1,8 @@
 package uk.gov.homeoffice.cirium.actors
 
-import akka.actor.{ Actor, ActorLogging, Props, Timers }
+import akka.actor.{Actor, Props, Timers}
 import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 
 import scala.collection.mutable
@@ -23,7 +24,7 @@ object CiriumPortStatusActor {
   def props(
     hoursOfHistory: Int = 24,
     currentTimeMillisFunc: () => Long = () => new DateTime().getMillis): Props =
-    Props(classOf[CiriumPortStatusActor], hoursOfHistory, currentTimeMillisFunc)
+    Props(new CiriumPortStatusActor(hoursOfHistory, currentTimeMillisFunc))
 }
 
 case class RemovalDetails(lastRemovalTime: Long, totalRemoved: Int, remainingAfterRemoval: Int)
@@ -38,7 +39,8 @@ case class PortFeedHealthSummary(
 
 class CiriumPortStatusActor(
   hoursOfHistory: Int,
-  nowMillis: () => Long) extends Actor with ActorLogging with Timers {
+  nowMillis: () => Long) extends Actor with Timers {
+  private val log = LoggerFactory.getLogger(getClass)
 
   import CiriumPortStatusActor._
 
@@ -107,7 +109,7 @@ class CiriumPortStatusActor(
       latestStatus = Option(s)
 
     case Failure(t) =>
-      log.error(t, s"Got a failure")
+      log.error(s"Got a failure", t)
 
     case other =>
       log.error(s"Got this unexpected message $other")

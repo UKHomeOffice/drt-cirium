@@ -1,9 +1,9 @@
 package uk.gov.homeoffice.cirium.services.feed
 
 import akka.NotUsed
-import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Scheduler }
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
 import akka.stream.Materializer
@@ -16,9 +16,9 @@ import uk.gov.homeoffice.cirium.services.entities._
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.matching.Regex
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 trait CiriumClientLike {
   def initialRequest(): Future[CiriumInitialResponse]
@@ -106,7 +106,9 @@ object Cirium {
     def apply(endpoint: String): LatestItem = LatestItem(Option(endpoint))
   }
 
-  class CiriumLastItemActor extends Actor with ActorLogging {
+  class CiriumLastItemActor extends Actor {
+    private val log = LoggerFactory.getLogger(getClass)
+
     var lastItem: LatestItem = LatestItem(None)
 
     def receive: Receive = {

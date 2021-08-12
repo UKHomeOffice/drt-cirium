@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.cirium.actors
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor._
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 
@@ -10,7 +11,7 @@ import scala.util.Failure
 
 object CiriumFlightStatusRouterActor {
 
-  def props(portActors: Map[String, ActorRef]): Props = Props(classOf[CiriumFlightStatusRouterActor], portActors)
+  def props(portActors: Map[String, ActorRef]): Props = Props(new CiriumFlightStatusRouterActor(portActors))
 
   case class GetFlightDeltas(flightId: Int)
 
@@ -29,7 +30,8 @@ case class CiriumFeedHealthStatus(
   lastMessage: Option[CiriumTrackableStatus],
   upTime: Long)
 
-class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor with ActorLogging {
+class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor {
+  private val log = LoggerFactory.getLogger(getClass)
 
   var isReady: Boolean = false
 
@@ -47,7 +49,7 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
     case ts: CiriumTrackableStatus =>
       if (!isReady && ts.isInSync()) {
         isReady = true
-        log.info(s"Finished cirium backlog after ${upTimeSeconds} seconds.")
+        log.info(s"Finished cirium backlog after $upTimeSeconds seconds.")
       }
 
       lastMessage = Option(ts)
@@ -56,10 +58,10 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       portActors.get(portCodeForUpdate).foreach(_ ! ts)
 
     case Failure(t) =>
-      log.error(t, s"Got a failure")
+      log.error(s"Got a failure", t)
 
     case akka.actor.Status.Failure(t) =>
-      log.error(t, s"Got a failure")
+      log.error(s"Got a failure", t)
 
     case other =>
       log.error(s"Got this unexpected message (${other.getClass}) $other")
