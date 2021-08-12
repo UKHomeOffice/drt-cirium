@@ -39,7 +39,7 @@ lazy val root = (project in file(".")).
   .enablePlugins(DockerPlugin)
   .enablePlugins(JavaAppPackaging)
 
-fork in run := true
+run / fork := true
 
 publishTo := {
   val artifactory = "https://artifactory.digital.homeoffice.gov.uk/"
@@ -50,13 +50,11 @@ publishTo := {
     Some("release" at artifactory + "artifactory/libs-release-local")
 }
 
-//credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
-
 // Enable publishing the jar produced by `test:package`
-publishArtifact in(Test, packageBin) := true
+Test / packageBin / publishArtifact := true
 
 // Enable publishing the test API jar
-publishArtifact in(Test, packageDoc) := true
+Test / packageDoc / publishArtifact := true
 
 // Enable publishing the test sources jar
-publishArtifact in(Test, packageSrc) := true
+Test / packageSrc / publishArtifact := true
