@@ -8,7 +8,7 @@ import akka.stream.{ ActorMaterializer, Materializer }
 import akka.stream.scaladsl.Sink
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.AppEnvironment._
+import uk.gov.homeoffice.cirium.AppConfig._
 import uk.gov.homeoffice.cirium.actors.{ CiriumFlightStatusRouterActor, CiriumPortStatusActor }
 import uk.gov.homeoffice.cirium.services.api.{ FlightScheduledRoutes, FlightStatusRoutes, StatusRoutes }
 import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategyImpl, Cirium }
@@ -28,21 +28,21 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   val portActors: Map[String, ActorRef] = portCodes.map(port =>
     port -> system.actorOf(
-      CiriumPortStatusActor.props(statusRetentionDurationHours),
+      CiriumPortStatusActor.props(flightRetentionHours),
       s"$port-status-actor")).toMap
 
   val flightStatusActor: ActorRef = system
     .actorOf(CiriumFlightStatusRouterActor.props(portActors), "flight-status-actor")
 
   val client: Cirium.ProdClient = new Cirium.ProdClient(
-    cirium_app_Id,
-    cirium_app_key,
-    cirium_app_entry_point)
+    ciriumAppId,
+    ciriumAppKey,
+    ciriumAppEntryPoint)
 
   val millis = 48.hours.toMillis
   val targetTime = new DateTime().minus(millis)
 
-  val feed = Cirium.Feed(client, pollEveryMillis = pollMillis, BackwardsStrategyImpl(client, targetTime))
+  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime))
 
   val stepSize = 1000
 
