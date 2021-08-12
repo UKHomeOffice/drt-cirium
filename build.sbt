@@ -10,10 +10,14 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "uk.gov.homeoffice",
-      scalaVersion := "2.12.13",
+      scalaVersion := "2.13.6",
     )),
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
+
+    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
