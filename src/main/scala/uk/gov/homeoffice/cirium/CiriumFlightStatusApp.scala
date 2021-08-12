@@ -39,8 +39,7 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
     ciriumAppKey,
     ciriumAppEntryPoint)
 
-  val millis = 48.hours.toMillis
-  val targetTime = new DateTime().minus(millis)
+  val targetTime = new DateTime().minus(AppConfig.goBackHours.hours.toMillis)
 
   val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime))
 
