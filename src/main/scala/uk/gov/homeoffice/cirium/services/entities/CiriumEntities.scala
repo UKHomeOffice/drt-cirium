@@ -11,7 +11,7 @@ import scala.util.Try
 //json Schema https://api.flightstats.com/flex/flightstatus/rest/v2/schema/json
 
 case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
-  def uri = Uri(item)
+  def uri: Uri = Uri(item)
 }
 trait CiriumFlightStatusResponse
 

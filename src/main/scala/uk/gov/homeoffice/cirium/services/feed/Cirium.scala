@@ -13,7 +13,6 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities._
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -67,7 +66,7 @@ object Cirium {
         })
         .recover {
           case error: Throwable =>
-            log.error(s"2Error parsing Cirium response from $uri", error)
+            log.error(s"Error parsing Cirium response from $uri", error)
             CiriumItemListResponse(CiriumRequestMetaData("", None, None, ""), List())
         }
 
@@ -94,8 +93,7 @@ object Cirium {
   }
 
   class ProdClient(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends Client(appId, appKey, entryPoint) {
-    override def sendReceive(uri: Uri): Future[HttpResponse] = Http()
-      .singleRequest(HttpRequest(HttpMethods.GET, uri))
+    override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
   case object Ask
@@ -160,15 +158,12 @@ object Cirium {
               })
             })
             .mapConcat(identity)
-            .mapAsync(20) { item =>
+            .mapAsync(5) { item =>
               client.requestItem(item)
             }
             .collect {
-              case CiriumFlightStatusResponseSuccess(meta, maybeFS) if maybeFS.isDefined =>
-                val trackableFlights: immutable.Seq[CiriumTrackableStatus] = maybeFS.get.map { f =>
-                  CiriumTrackableStatus(f, meta.url, System.currentTimeMillis)
-                }
-                trackableFlights
+              case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
+                statuses.map(f => CiriumTrackableStatus(f, meta.url, System.currentTimeMillis))
             }
             .mapConcat(identity)
 
