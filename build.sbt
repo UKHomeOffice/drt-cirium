@@ -40,7 +40,7 @@ lazy val root = (project in file(".")).
   .enablePlugins(DockerPlugin)
   .enablePlugins(JavaAppPackaging)
 
-run / fork := true
+Test / fork := true
 
 publishTo := {
   val artifactory = "https://artifactory.digital.homeoffice.gov.uk/"
