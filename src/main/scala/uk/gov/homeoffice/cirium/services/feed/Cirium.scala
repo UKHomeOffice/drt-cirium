@@ -153,7 +153,7 @@ object Cirium {
                 if (r.items.nonEmpty) {
                   (latestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
                 } else {
-                  Future(List())
+                  Future.successful(List())
                 }
               })
             })

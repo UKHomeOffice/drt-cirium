@@ -49,7 +49,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
         case itemUriRegEx(itemId) =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponse(s"XX$itemId", itemId))))
         case u =>
-          println(s"got a $u")
           Future.failed(new Exception("hmm"))
       }
 
