@@ -5,16 +5,16 @@ import akka.http.scaladsl.model._
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategy, Cirium }
+import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 case class MockBackwardsStrategy(url: String) extends BackwardsStrategy {
   override def backUntil(startItem: String): Future[String] = Future.successful(url)
@@ -27,6 +27,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   isolated
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
+
   implicit val mat: Materializer = Materializer.createMaterializer(system)
 
   "I should be able to connect to the feed and see what happens" >> {
@@ -65,15 +66,9 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     val client = new MockClient(itemListResponse)
     val result = Await.result(client.backwards("test", 2), 1.second)
 
-    val expected = CiriumItemListResponse(
-      CiriumRequestMetaData(
-        "previous",
-        Some(CiriumItemId("2019/08/19/11/01/28/731/FFF", "2019/08/19/11/01/28/731/XXX")),
-        Some(CiriumBatchSize("2", 2)),
-        "https://endpoint/rest/v2/json/2019/08/19/11/01/28/731/YYY/previous/2"),
-      List(
-        "https://endpoint/rest/v2/json/2019/08/19/11/01/28/469/FFF",
-        "https://endpoint/rest/v2/json/2019/08/19/11/01/28/475/XXX"))
+    val expected = CiriumItemListResponse(List(
+      "https://endpoint/rest/v2/json/2019/08/19/11/01/28/469/FFF",
+      "https://endpoint/rest/v2/json/2019/08/19/11/01/28/475/XXX"))
 
     result === expected
   }

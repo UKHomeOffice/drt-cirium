@@ -67,7 +67,7 @@ object Cirium {
         .recover {
           case error: Throwable =>
             log.error(s"Error parsing Cirium response from $uri", error)
-            CiriumItemListResponse(CiriumRequestMetaData("", None, None, ""), List())
+            CiriumItemListResponse.empty
         }
 
     def makeRequest(endpoint: String): Future[HttpResponse] = {

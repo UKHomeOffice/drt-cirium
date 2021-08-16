@@ -25,7 +25,11 @@ case class CiriumFlightStatusResponseFailure(
 
 case class CiriumItemResponse(request: CiriumRequestMetaData, item: String)
 
-case class CiriumItemListResponse(request: CiriumRequestMetaData, items: List[String])
+case class CiriumItemListResponse(items: List[String])
+
+object CiriumItemListResponse {
+  val empty: CiriumItemListResponse = CiriumItemListResponse(List())
+}
 
 case class CiriumBatchSize(requested: String, interpreted: Int)
 

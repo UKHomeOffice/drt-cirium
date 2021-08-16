@@ -60,11 +60,8 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
     case Failure(t) =>
       log.error(s"Got a failure", t)
 
-    case akka.actor.Status.Failure(t) =>
-      log.error(s"Got a failure", t)
-
     case other =>
-      log.error(s"Got this unexpected message (${other.getClass}) $other")
+      log.error(s"Got this unexpected message ${other.getClass}")
   }
 
 }

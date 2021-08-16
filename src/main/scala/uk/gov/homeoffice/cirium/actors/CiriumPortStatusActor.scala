@@ -99,10 +99,11 @@ class CiriumPortStatusActor(
 
       val removals = RemovalDetails(System.currentTimeMillis(), forRemoval.size, trackableStatuses.size)
 
-      log.info(s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining")
-
-      removalDetails = Option(removals)
-      trackableStatuses --= forRemoval
+      if (removals.totalRemoved > 0) {
+        log.info(s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining")
+        removalDetails = Option(removals)
+        trackableStatuses --= forRemoval
+      }
 
     case s: CiriumTrackableStatus =>
       trackableStatuses(s.status.flightId) = s
