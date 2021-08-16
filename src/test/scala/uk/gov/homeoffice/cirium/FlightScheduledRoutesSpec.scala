@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.Specs2RouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.services.api.FlightScheduledRoutes
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse }
@@ -17,13 +17,13 @@ import scala.io.Source
 
 class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val mat: Materializer = Materializer.createMaterializer(system)
   implicit val scheduler: Scheduler = system.scheduler
   val executionContext: ExecutionContext = system.dispatcher
 
   import uk.gov.homeoffice.cirium.JsonSupport._
 
-  val ciriumRespondJson = Source.fromResource("ciriumScheduledFlight.json").getLines().mkString
+  val ciriumRespondJson: String = Source.fromResource("ciriumScheduledFlight.json").getLines().mkString
 
   def expectedScheduleResponse = List(
     CiriumScheduledFlights(
@@ -34,12 +34,12 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
       departureTime = "2021-01-21T19:25:00.000",
       flightNumber = "23456"))
 
-  def httpResponse(jsonString: String) = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonString))
+  def httpResponse(jsonString: String): HttpResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonString))
 
   "Given json string" should {
     "UnMarshal httpResponse to CiriumScheduledResponse object" in {
       val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondJson)).to[CiriumScheduledResponse]
-      val result = Await.result(futureResult, 5 second)
+      val result = Await.result(futureResult, 5.second)
       result.scheduledFlights mustEqual expectedScheduleResponse
     }
 
@@ -50,11 +50,11 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
     "respond with the flight details with departure date" in {
       val scheduledArrival = CiriumScheduledFlightRequest("W9", 3797, 2021, 1, 21)
       val scheduledArrivalEntityF = Marshal[CiriumScheduledFlightRequest](scheduledArrival).to[MessageEntity]
-      val scheduledArrivalEntity = Await.result(scheduledArrivalEntityF, 5 second)
+      val scheduledArrivalEntity = Await.result(scheduledArrivalEntityF, 5.second)
       Get("/flightScheduled", scheduledArrivalEntity) ~> flightScheduledRoute ~> check {
         status mustEqual StatusCodes.OK
         val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondJson)).to[CiriumScheduledResponse]
-        val result = Await.result(futureResult, 5 second)
+        val result = Await.result(futureResult, 5.second)
         result.scheduledFlights mustEqual expectedScheduleResponse
 
       }

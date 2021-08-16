@@ -1,25 +1,35 @@
-lazy val akkaHttpVersion = "10.1.9"
-lazy val akkaVersion = "2.5.23"
+lazy val akkaHttpVersion = "10.2.6"
+lazy val akkaVersion = "2.6.8"
 lazy val specs2 = "4.6.0"
 lazy val jodaTime = "2.9.4"
-lazy val scalaLoggingVersion = "3.9.2"
-lazy val logBackClassicVersion = "1.1.3"
+lazy val logBackClassicVersion = "1.2.3"
+lazy val logbackContribVersion = "0.1.5"
+lazy val jacksonDatabindVersion = "2.10.0"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "uk.gov.homeoffice",
-      scalaVersion := "2.12.8",
+      scalaVersion := "2.13.6",
     )),
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
+
+    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "ch.qos.logback" % "logback-classic" % logBackClassicVersion,
       "joda-time" % "joda-time" % jodaTime,
-      "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
-      "ch.qos.logback" % "logback-classic" % logBackClassicVersion % Runtime,
+
+      "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
+      "ch.qos.logback.contrib" % "logback-jackson" % logbackContribVersion,
+      "com.fasterxml.jackson.core" % "jackson-databind" % jacksonDatabindVersion,
+      "org.codehaus.janino" % "janino" % "3.0.7",
 
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
@@ -30,7 +40,7 @@ lazy val root = (project in file(".")).
   .enablePlugins(DockerPlugin)
   .enablePlugins(JavaAppPackaging)
 
-fork in run := true
+Test / fork := true
 
 publishTo := {
   val artifactory = "https://artifactory.digital.homeoffice.gov.uk/"
@@ -41,13 +51,11 @@ publishTo := {
     Some("release" at artifactory + "artifactory/libs-release-local")
 }
 
-//credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
-
 // Enable publishing the jar produced by `test:package`
-publishArtifact in(Test, packageBin) := true
+Test / packageBin / publishArtifact := true
 
 // Enable publishing the test API jar
-publishArtifact in(Test, packageDoc) := true
+Test / packageDoc / publishArtifact := true
 
 // Enable publishing the test sources jar
-publishArtifact in(Test, packageSrc) := true
+Test / packageSrc / publishArtifact := true

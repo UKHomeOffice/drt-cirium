@@ -13,7 +13,7 @@ steps:
   image: quay.io/ukhomeofficedigital/scala-sbt:latest
   commands:
     - /root/entrypoint.sh
-    - sbt docker:stage
+    - sbt test docker:stage
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD

@@ -11,7 +11,7 @@ import scala.util.Try
 //json Schema https://api.flightstats.com/flex/flightstatus/rest/v2/schema/json
 
 case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
-  def uri = Uri(item)
+  def uri: Uri = Uri(item)
 }
 trait CiriumFlightStatusResponse
 
@@ -25,7 +25,11 @@ case class CiriumFlightStatusResponseFailure(
 
 case class CiriumItemResponse(request: CiriumRequestMetaData, item: String)
 
-case class CiriumItemListResponse(request: CiriumRequestMetaData, items: List[String])
+case class CiriumItemListResponse(items: List[String])
+
+object CiriumItemListResponse {
+  val empty: CiriumItemListResponse = CiriumItemListResponse(List())
+}
 
 case class CiriumBatchSize(requested: String, interpreted: Int)
 

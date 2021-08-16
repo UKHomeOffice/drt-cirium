@@ -1,21 +1,17 @@
 package uk.gov.homeoffice.cirium.actors
 
-import java.lang.management.ManagementFactory
-
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import akka.pattern.AskableActorRef
-import akka.util.Timeout
+import akka.actor.{Actor, ActorRef, Props}
+import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor._
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetPortFeedHealthSummary
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 
-import scala.concurrent.duration._
+import java.lang.management.ManagementFactory
 import scala.language.postfixOps
 import scala.util.Failure
 
 object CiriumFlightStatusRouterActor {
 
-  def props(portActors: Map[String, ActorRef]): Props = Props(classOf[CiriumFlightStatusRouterActor], portActors)
+  def props(portActors: Map[String, ActorRef]): Props = Props(new CiriumFlightStatusRouterActor(portActors))
 
   case class GetFlightDeltas(flightId: Int)
 
@@ -34,7 +30,8 @@ case class CiriumFeedHealthStatus(
   lastMessage: Option[CiriumTrackableStatus],
   upTime: Long)
 
-class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor with ActorLogging {
+class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor {
+  private val log = LoggerFactory.getLogger(getClass)
 
   var isReady: Boolean = false
 
@@ -50,10 +47,9 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       sender() ! CiriumFeedHealthStatus(isReady, lastMessage, upTimeSeconds)
 
     case ts: CiriumTrackableStatus =>
-
       if (!isReady && ts.isInSync()) {
         isReady = true
-        log.info(s"Finished cirium backlog after ${upTimeSeconds} seconds.")
+        log.info(s"Finished cirium backlog after $upTimeSeconds seconds.")
       }
 
       lastMessage = Option(ts)
@@ -61,10 +57,11 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       val portCodeForUpdate = ts.status.arrivalAirportFsCode
       portActors.get(portCodeForUpdate).foreach(_ ! ts)
 
-    case Failure(e) =>
-      log.error(s"Got an exception", e)
+    case Failure(t) =>
+      log.error(s"Got a failure", t)
+
     case other =>
-      log.error(s"Got this unexpected message ${other}")
+      log.error(s"Got this unexpected message ${other.getClass}")
   }
 
 }
