@@ -11,7 +11,7 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -163,13 +163,22 @@ object Cirium {
             }
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
-                statuses.map(f => CiriumTrackableStatus(f, meta.url, System.currentTimeMillis))
-            }
-            .mapConcat(identity)
+                statuses.map(status =>
+                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+            }.mapConcat(identity)
 
           tickingSource
         }
   }
+
+  def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
+    if (status.arrivalAirportFsCode.toUpperCase == "LBA" && status.airportResources.exists(_.arrivalTerminal.isEmpty)) {
+      status.copy(airportResources = status.airportResources.map(ar => ar.copy(arrivalTerminal = Option("T1"))))
+    } else {
+      status
+    }
+  }
+
 }
 
 trait BackwardsStrategy {
