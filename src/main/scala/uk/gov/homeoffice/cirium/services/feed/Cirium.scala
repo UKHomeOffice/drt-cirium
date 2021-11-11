@@ -172,7 +172,7 @@ object Cirium {
   }
 
   def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
-    if (status.arrivalAirportFsCode.toUpperCase == "LBA" && status.airportResources.exists(_.arrivalTerminal.isEmpty)) {
+    if ((status.arrivalAirportFsCode.toUpperCase == "LBA" || status.arrivalAirportFsCode.toUpperCase == "CWL") && status.airportResources.exists(_.arrivalTerminal.isEmpty)) {
       status.copy(airportResources = status.airportResources.map(ar => ar.copy(arrivalTerminal = Option("T1"))))
     } else {
       status
