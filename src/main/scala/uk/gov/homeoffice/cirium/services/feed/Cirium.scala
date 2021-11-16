@@ -13,7 +13,6 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
 
-import scala.Predef.Set
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
