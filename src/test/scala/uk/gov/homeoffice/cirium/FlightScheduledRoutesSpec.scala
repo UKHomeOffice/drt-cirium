@@ -8,11 +8,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.services.api.FlightScheduledRoutes
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse }
+import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse}
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
 
 class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
@@ -24,6 +24,8 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
   import uk.gov.homeoffice.cirium.JsonSupport._
 
   val ciriumRespondJson: String = Source.fromResource("ciriumScheduledFlight.json").getLines().mkString
+
+  val ciriumRespondWithoutRequestObjectInJson: String = Source.fromResource("ciriumScheduledFlight_without_request.json").getLines().mkString
 
   def expectedScheduleResponse = List(
     CiriumScheduledFlights(
@@ -44,6 +46,16 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
     }
 
   }
+
+  "Given json string without request object" should {
+    "UnMarshal httpResponse to CiriumScheduledResponse object" in {
+      val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondWithoutRequestObjectInJson)).to[CiriumScheduledResponse]
+      val result = Await.result(futureResult, 5.second)
+      result.scheduledFlights mustEqual expectedScheduleResponse
+    }
+
+  }
+
   val client: Cirium.Client = new MockClient(ciriumRespondJson)
 
   "flightScheduled route for a specific flight" should {

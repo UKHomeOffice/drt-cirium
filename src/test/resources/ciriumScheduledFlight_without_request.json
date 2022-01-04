@@ -1,0 +1,99 @@
+{
+  "scheduledFlights": [
+    {
+      "carrierFsCode": "ASD",
+      "flightNumber": "23456",
+      "departureAirportFsCode": "KIV",
+      "arrivalAirportFsCode": "LTN",
+      "departureTime": "2021-01-21T19:25:00.000",
+      "arrivalTime": "2021-01-21T20:55:00.000",
+      "stops": 0,
+      "flightEquipmentIataCode": "32Q",
+      "isCodeshare": false,
+      "isWetlease": true,
+      "serviceType": "J",
+      "serviceClasses": [
+        "Y"
+      ],
+      "trafficRestrictions": [
+        "B"
+      ],
+      "codeshares": [],
+      "wetleaseOperatorFsCode": "ASD",
+      "referenceCode": "1480-1311734--"
+    }
+  ],
+  "appendix": {
+    "airlines": [
+      {
+        "fs": "ASD",
+        "iata": "ASD9",
+        "icao": "WUK",
+        "name": "ASD Air UK",
+        "active": true
+      },
+      {
+        "fs": "ASD",
+        "iata": "ASD",
+        "icao": "WZZ",
+        "name": "ASD Air",
+        "active": true
+      }
+    ],
+    "airports": [
+      {
+        "fs": "LTN",
+        "iata": "LTN",
+        "icao": "EGGW",
+        "faa": "",
+        "name": "London Luton Airport",
+        "city": "London",
+        "cityCode": "LON",
+        "stateCode": "EN",
+        "countryCode": "GB",
+        "countryName": "United Kingdom",
+        "regionName": "Europe",
+        "timeZoneRegionName": "Europe/London",
+        "weatherZone": "",
+        "localTime": "2021-01-21T14:44:05.144",
+        "utcOffsetHours": 0,
+        "latitude": 51.879768,
+        "longitude": -0.376232,
+        "elevationFeet": 526,
+        "classification": 2,
+        "active": true
+      },
+      {
+        "fs": "KIV",
+        "iata": "KIV",
+        "icao": "LUKK",
+        "faa": "",
+        "name": "Chisinau International Airport",
+        "city": "Chisinau",
+        "cityCode": "KIV",
+        "countryCode": "MD",
+        "countryName": "Republic of Moldova",
+        "regionName": "Europe",
+        "timeZoneRegionName": "Europe/Chisinau",
+        "weatherZone": "",
+        "localTime": "2021-01-21T16:44:05.144",
+        "utcOffsetHours": 2,
+        "latitude": 46.935442,
+        "longitude": 28.934967,
+        "elevationFeet": 307,
+        "classification": 4,
+        "active": true
+      }
+    ],
+    "equipments": [
+      {
+        "iata": "32Q",
+        "name": "Airbus A321neo",
+        "turboProp": false,
+        "jet": true,
+        "widebody": false,
+        "regional": false
+      }
+    ]
+  }
+}
