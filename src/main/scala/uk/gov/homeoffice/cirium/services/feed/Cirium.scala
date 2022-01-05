@@ -86,7 +86,7 @@ object Cirium {
         .to[CiriumFlightStatusResponseSuccess]
         .recover {
           case error: Throwable =>
-            log.error(s"Error parsing Cirium response from $endpoint", error)
+            log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint", error)
             CiriumFlightStatusResponseFailure(error)
         }
     })
@@ -164,7 +164,7 @@ object Cirium {
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
                 statuses.map(status =>
-                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.map(_.url).getOrElse(""), System.currentTimeMillis))
             }.mapConcat(identity)
 
           tickingSource

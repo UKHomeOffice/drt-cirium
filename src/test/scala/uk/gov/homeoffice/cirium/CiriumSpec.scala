@@ -79,11 +79,11 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
-      CiriumRequestMetaData(
+      Option(CiriumRequestMetaData(
         "item",
         Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
         None,
-        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"),
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1")),
       Option(List(
         CiriumFlightStatus(
           100000,
