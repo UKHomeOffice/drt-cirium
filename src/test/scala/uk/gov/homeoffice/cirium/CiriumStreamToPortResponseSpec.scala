@@ -63,6 +63,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward1Regex: Regex = "https://item/1/.+".r
     val forward3Regex: Regex = "https://item/3/.+".r
     val forward5Regex: Regex = "https://item/5/.+".r
+    val forward4RegEx: Regex = "https://item/4.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
     def sendReceive(endpoint: Uri): Future[HttpResponse] = {
@@ -78,8 +79,10 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2)))
         case forward5Regex() =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse)))
+        case forward4RegEx() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponseWithoutRequestObject(s"XX4", "4"))))
         case itemUriRegEx(itemId) =>
-          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponseWithoutRequestObject(s"XX$itemId", itemId))))
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`,flightStatusResponse(s"XX$itemId", itemId))))
         case u =>
           Future.failed(new Exception("hmm"))
       }
@@ -181,7 +184,13 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       source.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t")))
     }
 
-    probe.expectNoMessage(5.seconds)
+    probe.fishForMessage(5.seconds) {
+      case CiriumTrackableStatus(s, _, _) if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX2" =>
+        true
+      case CiriumTrackableStatus(s, _, _) =>
+        false
+    }
+
     success
   }
 
@@ -283,7 +292,8 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |{
       |    "items": [
       |        "https://item/2",
-      |        "https://item/3"
+      |        "https://item/3",
+      |        "https://item/4"
       |    ]
       |}
     """.stripMargin
