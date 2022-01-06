@@ -16,7 +16,7 @@ case class CiriumInitialResponse(request: CiriumRequestMetaData, item: String) {
 trait CiriumFlightStatusResponse
 
 case class CiriumFlightStatusResponseSuccess(
-  request: Option[CiriumRequestMetaData],
+  request: CiriumRequestMetaData,
   flightStatuses: Option[List[CiriumFlightStatus]]) extends CiriumFlightStatusResponse
 
 case class CiriumFlightStatusResponseFailure(

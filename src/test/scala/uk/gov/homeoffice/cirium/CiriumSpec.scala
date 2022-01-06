@@ -9,6 +9,7 @@ import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
+import spray.json.DeserializationException
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 
@@ -79,11 +80,11 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
-      Option(CiriumRequestMetaData(
+      CiriumRequestMetaData(
         "item",
         Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
         None,
-        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1")),
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"),
       Option(List(
         CiriumFlightStatus(
           100000,
@@ -132,6 +133,13 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           Seq()))))
 
     result === expected
+  }
+
+  "I should get exception while parsing response that does not have request object" >> {
+    val expected = CiriumFlightStatusResponseFailure(DeserializationException("Object is missing required member 'request'"))
+    val client = new MockClient(flightStatusResponseWithoutRequestObject)
+    val result = Await.result(client.requestItem("endpoint"), 1.second).asInstanceOf[CiriumFlightStatusResponseFailure]
+    result.error.getMessage === expected.error.getMessage
   }
 
   def initialResponse: String =
@@ -262,6 +270,94 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |    ]
       |}
     """.stripMargin
+
+  def flightStatusResponseWithoutRequestObject: String =
+    """
+      |{
+      |    "flightStatuses": [
+      |        {
+      |            "flightId": 100000,
+      |            "carrierFsCode": "TST",
+      |            "operatingCarrierFsCode": "TST",
+      |            "primaryCarrierFsCode": "TST",
+      |            "flightNumber": "1000",
+      |            "departureAirportFsCode": "TST",
+      |            "arrivalAirportFsCode": "LHR",
+      |            "departureDate": {
+      |                "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                "dateLocal": "2019-07-15T10:10:00.000"
+      |            },
+      |            "arrivalDate": {
+      |                "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                "dateLocal": "2019-07-15T13:05:00.000"
+      |            },
+      |            "status": "A",
+      |            "schedule": {
+      |                "flightType": "J",
+      |                "serviceClasses": "XXXX",
+      |                "restrictions": "",
+      |                "uplines": [],
+      |                "downlines": []
+      |            },
+      |            "operationalTimes": {
+      |                "publishedDeparture": {
+      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:10:00.000"
+      |                },
+      |                "scheduledGateDeparture": {
+      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:10:00.000"
+      |                },
+      |                "estimatedRunwayDeparture": {
+      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:37:00.000"
+      |                },
+      |                "actualRunwayDeparture": {
+      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:37:00.000"
+      |                },
+      |                "publishedArrival": {
+      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                    "dateLocal": "2019-07-15T13:05:00.000"
+      |                },
+      |                "scheduledGateArrival": {
+      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                    "dateLocal": "2019-07-15T13:05:00.000"
+      |                }
+      |            },
+      |            "codeshares": [
+      |                {
+      |                    "fsCode": "CZ",
+      |                    "flightNumber": "1000",
+      |                    "relationship": "L"
+      |                },
+      |                {
+      |                    "fsCode": "DL",
+      |                    "flightNumber": "2000",
+      |                    "relationship": "L"
+      |                }
+      |            ],
+      |            "delays": {
+      |                "departureGateDelayMinutes": 5,
+      |                "arrivalGateDelayMinutes": 6
+      |            },
+      |            "flightDurations": {
+      |                "scheduledBlockMinutes": 115
+      |            },
+      |            "airportResources": {
+      |                "arrivalTerminal": "A"
+      |            },
+      |            "flightEquipment": {
+      |                "scheduledEquipmentIataCode": "XXX",
+      |                "actualEquipmentIataCode": "XXX",
+      |                "tailNumber": "Z-ZZZZ"
+      |            },
+      |            "flightStatusUpdates": [],
+      |            "irregularOperations": []
+      |        }
+      |    ]
+      |}
+  """.stripMargin
 }
 
 class MockClient(mockResponse: String)(implicit system: ActorSystem) extends Cirium.Client("", "", "") {

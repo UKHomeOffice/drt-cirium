@@ -25,8 +25,6 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
 
   val ciriumRespondJson: String = Source.fromResource("ciriumScheduledFlight.json").getLines().mkString
 
-  val ciriumRespondWithoutRequestObjectInJson: String = Source.fromResource("ciriumScheduledFlight_without_request.json").getLines().mkString
-
   def expectedScheduleResponse = List(
     CiriumScheduledFlights(
       arrivalAirportFsCode = "LTN",
@@ -41,15 +39,6 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
   "Given json string" should {
     "UnMarshal httpResponse to CiriumScheduledResponse object" in {
       val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondJson)).to[CiriumScheduledResponse]
-      val result = Await.result(futureResult, 5.second)
-      result.scheduledFlights mustEqual expectedScheduleResponse
-    }
-
-  }
-
-  "Given json string without request object" should {
-    "UnMarshal httpResponse to CiriumScheduledResponse object" in {
-      val futureResult = Unmarshal[HttpResponse](httpResponse(ciriumRespondWithoutRequestObjectInJson)).to[CiriumScheduledResponse]
       val result = Await.result(futureResult, 5.second)
       result.scheduledFlights mustEqual expectedScheduleResponse
     }

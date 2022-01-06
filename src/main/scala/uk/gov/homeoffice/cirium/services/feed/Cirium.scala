@@ -164,7 +164,7 @@ object Cirium {
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
                 statuses.map(status =>
-                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.map(_.url).getOrElse(""), System.currentTimeMillis))
+                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
             }.mapConcat(identity)
 
           tickingSource
