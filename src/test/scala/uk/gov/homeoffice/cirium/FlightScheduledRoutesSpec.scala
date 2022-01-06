@@ -44,7 +44,6 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
     }
 
   }
-
   val client: Cirium.Client = new MockClient(ciriumRespondJson)
 
   "flightScheduled route for a specific flight" should {

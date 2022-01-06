@@ -195,16 +195,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |}
     """.stripMargin
 
-  val back1WithoutRequestObjectHop: String =
-    """
-      |{
-      |    "items": [
-      |        "https://item/1",
-      |        "https://item/2"
-      |    ]
-      |}
-    """.stripMargin
-
   val back1hop: String =
     """
       |{
@@ -223,16 +213,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |    "items": [
       |        "https://item/1",
       |        "https://item/2"
-      |    ]
-      |}
-    """.stripMargin
-
-  val forwardWithoutRequestObject1: String =
-    """
-      |{
-      |    "items": [
-      |        "https://item/2",
-      |        "https://item/3"
       |    ]
       |}
     """.stripMargin
