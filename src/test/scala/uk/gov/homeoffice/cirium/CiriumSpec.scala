@@ -7,10 +7,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
-import github.gphat.censorinus.StatsDClient
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
-import spray.json.DeserializationException
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 
@@ -23,12 +21,14 @@ case class MockBackwardsStrategy(url: String) extends BackwardsStrategy {
 }
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
-  with BaseSpecification
+  with SpecificationLike
   with AfterEach {
   sequential
   isolated
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
+
+  val metricsCollector: MetricsCollector = new MockMetricsCollector
 
   implicit val mat: Materializer = Materializer.createMaterializer(system)
 
@@ -39,7 +39,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
-      metricsService)
+      metricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -55,7 +55,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the initial response" >> {
 
-    val client = new MockClient(initialResponse, metricsService)
+    val client = new MockClient(initialResponse, metricsCollector)
     val result = Await.result(client.initialRequest(), 1.second)
 
     val expected = CiriumInitialResponse(
@@ -66,7 +66,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the item list response" >> {
 
-    val client = new MockClient(itemListResponse, metricsService)
+    val client = new MockClient(itemListResponse, metricsCollector)
     val result = Await.result(client.backwards("test", 2), 1.second)
 
     val expected = CiriumItemListResponse(List(
@@ -78,7 +78,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse a flight status response" >> {
 
-    val client = new MockClient(flightStatusResponse, metricsService)
+    val client = new MockClient(flightStatusResponse, metricsCollector)
     val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
@@ -138,10 +138,9 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   }
 
   "I should get exception while parsing response that does not have request object" >> {
-    val expected = CiriumFlightStatusResponseFailure(DeserializationException("Object is missing required member 'request'"))
-    val client = new MockClient(flightStatusResponseWithoutRequestObject, metricsService)
-    val result = Await.result(client.requestItem("endpoint"), 1.second).asInstanceOf[CiriumFlightStatusResponseFailure]
-    result.error.getMessage === expected.error.getMessage
+    val client = new MockClient(flightStatusResponseWithoutRequestObject, metricsCollector)
+    val result = Await.result(client.requestItem("endpoint"), 1.second)
+    result.isInstanceOf[CiriumFlightStatusResponseFailure]
   }
 
   def initialResponse: String =
@@ -362,7 +361,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   """.stripMargin
 }
 
-class MockClient(mockResponse: String, metricsService: MetricsService)(implicit system: ActorSystem) extends Cirium.Client("", "", "", metricsService) {
+class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", "", metricsCollector) {
   def sendReceive(endpoint: Uri): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }

@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.MetricsService
+import uk.gov.homeoffice.cirium.MetricsCollector
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetHealth
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetPortFeedHealthSummary
 import uk.gov.homeoffice.cirium.actors.{CiriumFeedHealthStatus, PortFeedHealthSummary}
@@ -42,7 +42,7 @@ object CiriumAppHealthSummaryConstructor {
 case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
                           acceptableLostConnectivityDuration: FiniteDuration,
                           ciriumClient: CiriumClientLike,
-                          metricsService: MetricsService,
+                          metricsCollector: MetricsCollector,
                           now: () => Long = () => System.currentTimeMillis,
                          )(implicit context: ExecutionContext) {
   private val log = LoggerFactory.getLogger(getClass)
@@ -76,7 +76,7 @@ case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
           log.info(s"Current cirium latency ${latency / 1000} seconds - within allowable threshold")
           true
         } else {
-          metricsService.errorCounterMetric(s"isWithinHealthThresholds-outsideThreshold")
+          metricsCollector.errorCounterMetric(s"isWithinHealthThresholds-outsideAcceptableMessageLatency")
           log.error(s"Current cirium latency ${latency / 1000} seconds - outside allowable threshold")
           false
         }
@@ -87,7 +87,7 @@ case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
             s"Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - within allowable threshold")
           true
         } else {
-          metricsService.errorCounterMetric(s"isWithinHealthThresholds-withinThreshold")
+          metricsCollector.errorCounterMetric(s"isWithinHealthThresholds-outsideAcceptableLostConnectivityDuration")
           log.error(
             s"Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - outside allowable threshold")
           false
@@ -106,7 +106,7 @@ case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
       })
       .recover {
         case e: Throwable =>
-          metricsService.errorCounterMetric("latestMessageDateTime")
+          metricsCollector.errorCounterMetric("latestMessageDateTime")
           log.error("Failed to connect to cirium", e)
           None
       }

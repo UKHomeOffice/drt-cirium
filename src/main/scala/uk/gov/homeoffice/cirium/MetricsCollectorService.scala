@@ -5,7 +5,15 @@ import github.gphat.censorinus.StatsDClient
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class MetricsService(statsd: StatsDClient) {
+trait MetricsCollector {
+
+  def errorCounterMetric(name: String, value: Double = 1)
+
+  def infoCounterMetric(name: String, value: Double = 1)
+
+}
+
+case class MetricsCollectorService(statsd: StatsDClient) extends MetricsCollector {
 
   def counterMetric(name: String, value: Double): Unit = {
     Future(statsd.counter(name, value))

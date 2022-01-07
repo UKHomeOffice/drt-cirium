@@ -29,7 +29,7 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   val statsDClient: StatsDClient = new StatsDClient(hostname = AppConfig.statsdHost, port = AppConfig.statsdPort, prefix = AppConfig.statsdPrefix)
 
-  val metricsService = MetricsService(statsDClient)
+  val metricsCollector = MetricsCollectorService(statsDClient)
 
   val portActors: Map[String, ActorRef] = portCodes.map(port =>
     port -> system.actorOf(
@@ -43,11 +43,11 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
     ciriumAppId,
     ciriumAppKey,
     ciriumAppEntryPoint,
-    metricsService)
+    metricsCollector)
 
   val targetTime = new DateTime().minus(AppConfig.goBackHours.hours.toMillis)
 
-  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime, metricsService))
+  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime, metricsCollector))
 
   val stepSize = 1000
 

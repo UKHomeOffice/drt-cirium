@@ -6,6 +6,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.Specs2RouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
+import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.services.api.FlightScheduledRoutes
 import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse}
 import uk.gov.homeoffice.cirium.services.feed.Cirium
@@ -14,7 +15,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
 
-class FlightScheduledRoutesSpec extends BaseSpecification with FlightScheduledRoutes with Specs2RouteTest {
+class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
+
+  val metricsCollector: MetricsCollector = new MockMetricsCollector
 
   implicit val mat: Materializer = Materializer.createMaterializer(system)
   implicit val scheduler: Scheduler = system.scheduler
@@ -44,7 +47,7 @@ class FlightScheduledRoutesSpec extends BaseSpecification with FlightScheduledRo
 
   }
 
-  val client: Cirium.Client = new MockClient(ciriumRespondJson, metricsService)
+  val client: Cirium.Client = new MockClient(ciriumRespondJson, metricsCollector)
 
   "flightScheduled route for a specific flight" should {
     "respond with the flight details with departure date" in {

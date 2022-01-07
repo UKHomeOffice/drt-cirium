@@ -8,12 +8,12 @@ import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.{AskableActorRef, ask}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.{AppConfig, JsonSupport, MetricsService}
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetReadiness
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetStatuses
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.cirium.services.feed.Retry
 import uk.gov.homeoffice.cirium.services.health.{AppHealthCheck, CiriumAppHealthSummaryConstructor}
+import uk.gov.homeoffice.cirium.{AppConfig, JsonSupport, MetricsCollector}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -27,7 +27,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
 
   def flightStatusActor: ActorRef
 
-  def metricsService: MetricsService
+  def metricsCollector: MetricsCollector
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -51,7 +51,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
                 AppConfig.ciriumMessageLatencyToleranceSeconds seconds,
                 AppConfig.ciriumLostConnectToleranceSeconds seconds,
                 client,
-                metricsService)
+                metricsCollector)
 
               complete(CiriumAppHealthSummaryConstructor(flightStatusActor, portActors).flatMap { hs =>
                 healthChecker.isHealthy(hs).map { isHealthy: Boolean =>
