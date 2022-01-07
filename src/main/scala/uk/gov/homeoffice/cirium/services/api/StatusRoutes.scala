@@ -1,19 +1,19 @@
 package uk.gov.homeoffice.cirium.services.api
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
-import akka.http.scaladsl.server.Directives.{ concat, path, pathEnd, pathPrefix, rejectEmptyResponse, _ }
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.server.Directives.{concat, path, pathEnd, pathPrefix, rejectEmptyResponse, _}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.pattern.{ AskableActorRef, ask }
+import akka.pattern.{AskableActorRef, ask}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.{ AppConfig, JsonSupport }
+import uk.gov.homeoffice.cirium.{AppConfig, JsonSupport, MetricsService}
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor.GetReadiness
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.GetStatuses
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.cirium.services.feed.Retry
-import uk.gov.homeoffice.cirium.services.health.{ AppHealthCheck, CiriumAppHealthSummaryConstructor }
+import uk.gov.homeoffice.cirium.services.health.{AppHealthCheck, CiriumAppHealthSummaryConstructor}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -26,6 +26,8 @@ trait StatusRoutes extends CiriumBaseRoutes {
   def portActors: Map[String, ActorRef]
 
   def flightStatusActor: ActorRef
+
+  def metricsService: MetricsService
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -48,7 +50,8 @@ trait StatusRoutes extends CiriumBaseRoutes {
               val healthChecker = AppHealthCheck(
                 AppConfig.ciriumMessageLatencyToleranceSeconds seconds,
                 AppConfig.ciriumLostConnectToleranceSeconds seconds,
-                client)
+                client,
+                metricsService)
 
               complete(CiriumAppHealthSummaryConstructor(flightStatusActor, portActors).flatMap { hs =>
                 healthChecker.isHealthy(hs).map { isHealthy: Boolean =>
@@ -69,14 +72,14 @@ trait StatusRoutes extends CiriumBaseRoutes {
             val askableFlightStatusActor: AskableActorRef = flightStatusActor
             val response = (askableFlightStatusActor ? GetReadiness)
               .mapTo[Boolean].map { ready =>
-                if (ready) {
-                  logger.info(s"Ready to handle requests")
-                  HttpResponse(StatusCodes.NoContent)
-                } else {
-                  logger.info(s"Not ready to handle requests")
-                  HttpResponse(StatusCodes.BadGateway)
-                }
+              if (ready) {
+                logger.info(s"Ready to handle requests")
+                HttpResponse(StatusCodes.NoContent)
+              } else {
+                logger.info(s"Not ready to handle requests")
+                HttpResponse(StatusCodes.BadGateway)
               }
+            }
             complete(response)
           }
         },

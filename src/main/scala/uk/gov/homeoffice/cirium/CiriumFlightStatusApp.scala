@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
+import github.gphat.censorinus.StatsDClient
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.AppConfig._
@@ -26,6 +27,10 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit val scheduler: Scheduler = system.scheduler
 
+  val statsDClient: StatsDClient = new StatsDClient(hostname = AppConfig.statsdHost, port = AppConfig.statsdPort, prefix = AppConfig.statsdPrefix)
+
+  val metricsService = MetricsService(statsDClient)
+
   val portActors: Map[String, ActorRef] = portCodes.map(port =>
     port -> system.actorOf(
       CiriumPortStatusActor.props(flightRetentionHours),
@@ -37,11 +42,12 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
   val client: Cirium.ProdClient = new Cirium.ProdClient(
     ciriumAppId,
     ciriumAppKey,
-    ciriumAppEntryPoint)
+    ciriumAppEntryPoint,
+    metricsService)
 
   val targetTime = new DateTime().minus(AppConfig.goBackHours.hours.toMillis)
 
-  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime))
+  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime, metricsService))
 
   val stepSize = 1000
 

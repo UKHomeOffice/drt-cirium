@@ -9,11 +9,12 @@ import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{GetStatuses, RemoveExpired}
 import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike

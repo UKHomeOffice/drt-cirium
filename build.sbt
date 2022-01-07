@@ -5,6 +5,7 @@ lazy val jodaTime = "2.9.4"
 lazy val logBackClassicVersion = "1.2.3"
 lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.10.0"
+val censorinus = "2.1.16"
 
 lazy val root = (project in file(".")).
   settings(
@@ -19,6 +20,7 @@ lazy val root = (project in file(".")).
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
 
     libraryDependencies ++= Seq(
+      "com.github.gphat" %% "censorinus" % censorinus,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,

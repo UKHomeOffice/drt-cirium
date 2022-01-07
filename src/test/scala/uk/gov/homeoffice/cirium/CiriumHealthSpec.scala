@@ -1,18 +1,18 @@
 package uk.gov.homeoffice.cirium
 
-import akka.http.scaladsl.model.{ HttpResponse, Uri }
+import akka.http.scaladsl.model.{HttpResponse, Uri}
 import org.joda.time.DateTime
-import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.actors.CiriumFeedHealthStatus
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
-import uk.gov.homeoffice.cirium.services.health.{ AppHealthCheck, CiriumAppHealthSummary }
+import uk.gov.homeoffice.cirium.services.health.{AppHealthCheck, CiriumAppHealthSummary}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
-class CiriumHealthSpec extends Specification {
+class CiriumHealthSpec extends BaseSpecification {
 
   val ciriumStatus = CiriumFlightStatus(
     100000,
@@ -52,54 +52,54 @@ class CiriumHealthSpec extends Specification {
 
     "Given a latest processed message is the same as the latest on Cirium " +
       "Then the app is healthy" >> {
-        val nextItemUri = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(nextItemUri)
+      val nextItemUri = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
+      val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(nextItemUri)
 
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService)
 
-        val healthResult = healthSummaryWithLatestMessageUri(nextItemUri)
+      val healthResult = healthSummaryWithLatestMessageUri(nextItemUri)
 
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
+      val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
 
-        result === true
-      }
+      result === true
+    }
 
     "Given a latest processed newer than the latest on Cirium " +
       "Then the app is healthy" >> {
-        val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 29)
-        val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
+      val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 29)
+      val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
+      val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService)
 
-        val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
+      val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
+      val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
 
-        result === true
-      }
+      result === true
+    }
 
     "Given a last processed message that is older than the latest but within the threshold " +
       "Then the app is healthy" >> {
-        val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 34)
-        val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
+      val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 34)
+      val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
+      val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService)
 
-        val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
+      val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
+      val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
 
-        result === true
-      }
+      result === true
+    }
 
     "Given a last processed message that is older and outside the threshold then the app is not healthy" >> {
       val currentLatestUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 36)
       val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
       val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -111,38 +111,38 @@ class CiriumHealthSpec extends Specification {
     "Given a last processed message that is within the connectivity threshold and a failed connection to Cirium " +
       "then the app is healthy" >> {
 
-        val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithFailure("")
+      val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
+      val mockClientWithInitialResponseOnly = MockClientWithFailure("")
 
-        val now = () => new DateTime(2020, 2, 14, 14, 35)
-          .getMillis
+      val now = () => new DateTime(2020, 2, 14, 14, 35)
+        .getMillis
 
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService, now)
 
-        val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
+      val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
+      val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 5 second)
 
-        result === true
-      }
+      result === true
+    }
 
     "Given a last processed message that is outside the connectivity threshold and a failed connection to Cirium " +
       "then the app is not healthy" >> {
 
-        val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
-        val mockClientWithInitialResponseOnly = MockClientWithFailure("")
+      val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
+      val mockClientWithInitialResponseOnly = MockClientWithFailure("")
 
-        val now = () => new DateTime(2020, 2, 14, 14, 41)
-          .getMillis
+      val now = () => new DateTime(2020, 2, 14, 14, 41)
+        .getMillis
 
-        val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService, now)
 
-        val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
+      val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
-        val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
+      val result: Boolean = Await.result(healthChecker.isHealthy(healthResult), 1 second)
 
-        result === false
-      }
+      result === false
+    }
 
     "Given the app is not yet ready, it should be regarded as healthy" >> {
 
@@ -152,7 +152,7 @@ class CiriumHealthSpec extends Specification {
       val now = () => new DateTime(2020, 2, 14, 14, 41)
         .getMillis
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsService, now)
 
       val healthResult = CiriumAppHealthSummary(
         CiriumFeedHealthStatus(isReady = false, None, 0L), Map())
