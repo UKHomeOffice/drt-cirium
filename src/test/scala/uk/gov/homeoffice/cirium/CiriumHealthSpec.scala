@@ -15,8 +15,6 @@ import scala.language.postfixOps
 
 class CiriumHealthSpec extends Specification {
 
-  val metricsCollector: MetricsCollector = new MockMetricsCollector
-
   val ciriumStatus = CiriumFlightStatus(
     100000,
     "",
@@ -58,7 +56,7 @@ class CiriumHealthSpec extends Specification {
       val nextItemUri = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
       val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(nextItemUri)
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector)
 
       val healthResult = healthSummaryWithLatestMessageUri(nextItemUri)
 
@@ -73,7 +71,7 @@ class CiriumHealthSpec extends Specification {
       val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
       val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -88,7 +86,7 @@ class CiriumHealthSpec extends Specification {
       val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
       val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -102,7 +100,7 @@ class CiriumHealthSpec extends Specification {
       val lastProcessedUrl = urlForMessageAtDateTime(2020, 2, 14, 14, 30)
       val mockClientWithInitialResponseOnly = MockClientWithInitialResponseOnly(currentLatestUrl)
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -120,7 +118,7 @@ class CiriumHealthSpec extends Specification {
       val now = () => new DateTime(2020, 2, 14, 14, 35)
         .getMillis
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector, now)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -138,7 +136,7 @@ class CiriumHealthSpec extends Specification {
       val now = () => new DateTime(2020, 2, 14, 14, 41)
         .getMillis
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector, now)
 
       val healthResult = healthSummaryWithLatestMessageUri(lastProcessedUrl)
 
@@ -155,7 +153,7 @@ class CiriumHealthSpec extends Specification {
       val now = () => new DateTime(2020, 2, 14, 14, 41)
         .getMillis
 
-      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, metricsCollector, now)
+      val healthChecker = AppHealthCheck(5 minutes, 10 minutes, mockClientWithInitialResponseOnly, MockMetricsCollector, now)
 
       val healthResult = CiriumAppHealthSummary(
         CiriumFeedHealthStatus(isReady = false, None, 0L), Map())

@@ -17,8 +17,6 @@ import scala.io.Source
 
 class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
 
-  val metricsCollector: MetricsCollector = new MockMetricsCollector
-
   implicit val mat: Materializer = Materializer.createMaterializer(system)
   implicit val scheduler: Scheduler = system.scheduler
   val executionContext: ExecutionContext = system.dispatcher
@@ -47,7 +45,7 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
 
   }
 
-  val client: Cirium.Client = new MockClient(ciriumRespondJson, metricsCollector)
+  val client: Cirium.Client = new MockClient(ciriumRespondJson, MockMetricsCollector)
 
   "flightScheduled route for a specific flight" should {
     "respond with the flight details with departure date" in {

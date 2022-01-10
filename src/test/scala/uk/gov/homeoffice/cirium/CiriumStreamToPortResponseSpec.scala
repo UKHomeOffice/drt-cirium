@@ -24,8 +24,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
-  val metricsCollector: MetricsCollector = new MockMetricsCollector
-
   class MockClient(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri, metricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
@@ -148,7 +146,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a stream of messages, each should end up in the correct port" >> {
 
-    val client = new MockClient("https://latest", metricsCollector)
+    val client = new MockClient("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -173,7 +171,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a stream of messages, each should end up in the correct port even if request object is missing in json response" >> {
 
-    val client = new MockClientWithoutRequestObjectInResponse("https://latest", metricsCollector)
+    val client = new MockClientWithoutRequestObjectInResponse("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -198,7 +196,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a network failure, the failed request should retry" >> {
 
-    val client = new MockClientWithFailures("https://latest", metricsCollector)
+    val client = new MockClientWithFailures("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -223,7 +221,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given an item with invalid json, and an item with valid json, I should see the valid item in the sink." >> {
 
-    val client = new MockClientWithInvalidJson("https://latest", metricsCollector)
+    val client = new MockClientWithInvalidJson("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 

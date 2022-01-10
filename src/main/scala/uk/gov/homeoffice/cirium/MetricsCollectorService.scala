@@ -2,9 +2,6 @@ package uk.gov.homeoffice.cirium
 
 import github.gphat.censorinus.StatsDClient
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-
 trait MetricsCollector {
 
   def errorCounterMetric(name: String, value: Double = 1)
@@ -16,7 +13,7 @@ trait MetricsCollector {
 case class MetricsCollectorService(statsd: StatsDClient) extends MetricsCollector {
 
   def counterMetric(name: String, value: Double): Unit = {
-    Future(statsd.counter(name, value))
+    statsd.counter(name, value)
   }
 
   def errorCounterMetric(name: String, value: Double = 1) = {

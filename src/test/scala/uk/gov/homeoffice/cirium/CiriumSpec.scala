@@ -28,8 +28,6 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
-  val metricsCollector: MetricsCollector = new MockMetricsCollector
-
   implicit val mat: Materializer = Materializer.createMaterializer(system)
 
   "I should be able to connect to the feed and see what happens" >> {
@@ -39,7 +37,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
-      metricsCollector)
+      MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -55,7 +53,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the initial response" >> {
 
-    val client = new MockClient(initialResponse, metricsCollector)
+    val client = new MockClient(initialResponse, MockMetricsCollector)
     val result = Await.result(client.initialRequest(), 1.second)
 
     val expected = CiriumInitialResponse(
@@ -66,7 +64,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the item list response" >> {
 
-    val client = new MockClient(itemListResponse, metricsCollector)
+    val client = new MockClient(itemListResponse, MockMetricsCollector)
     val result = Await.result(client.backwards("test", 2), 1.second)
 
     val expected = CiriumItemListResponse(List(
@@ -78,7 +76,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse a flight status response" >> {
 
-    val client = new MockClient(flightStatusResponse, metricsCollector)
+    val client = new MockClient(flightStatusResponse, MockMetricsCollector)
     val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
@@ -138,7 +136,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   }
 
   "I should get exception while parsing response that does not have request object" >> {
-    val client = new MockClient(flightStatusResponseWithoutRequestObject, metricsCollector)
+    val client = new MockClient(flightStatusResponseWithoutRequestObject, MockMetricsCollector)
     val result = Await.result(client.requestItem("endpoint"), 1.second)
     result.isInstanceOf[CiriumFlightStatusResponseFailure]
   }
