@@ -1,10 +1,10 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
@@ -24,7 +24,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
-  class MockClient(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
+  class MockClient(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri, metricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
     val previousRegex: Regex = "https://current/previous/.+".r
@@ -56,7 +56,42 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
-  class MockClientWithFailures(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
+  class MockClientWithoutRequestObjectInResponse(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri, metricsCollector) {
+
+    val latestRegex: Regex = "https://latest.+".r
+    val previousRegex: Regex = "https://current/previous/.+".r
+    val forward1Regex: Regex = "https://item/1/.+".r
+    val forward3Regex: Regex = "https://item/3/.+".r
+    val forward4RegEx: Regex = "https://item/4.+".r
+    val forward5Regex: Regex = "https://item/5/.+".r
+    val itemUriRegEx: Regex = "https://item/(\\d).+".r
+
+    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+
+      val res = endpoint.toString() match {
+        case latestRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
+        case previousRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, back1WithoutRequestObjectHop)))
+        case forward1Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forwardWithoutRequestObject1)))
+        case forward3Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2)))
+        case forward5Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse)))
+        case forward4RegEx() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponseWithoutRequestObject(s"XX4", "4"))))
+        case itemUriRegEx(itemId) =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponse(s"XX$itemId", itemId))))
+        case u =>
+          Future.failed(new Exception("hmm"))
+      }
+
+      res
+    }
+  }
+
+  class MockClientWithFailures(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri, metricsCollector) {
 
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
@@ -84,7 +119,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
-  class MockClientWithInvalidJson(startUri: String)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri) {
+  class MockClientWithInvalidJson(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", startUri, metricsCollector) {
 
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
@@ -111,7 +146,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a stream of messages, each should end up in the correct port" >> {
 
-    val client = new MockClient("https://latest")
+    val client = new MockClient("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -134,9 +169,34 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     success
   }
 
+  "Given a stream of messages, each should end up in the correct port even if request object is missing in json response" >> {
+
+    val client = new MockClientWithoutRequestObjectInResponse("https://latest", MockMetricsCollector)
+    val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
+    val probe = TestProbe()
+
+    implicit val mat: Materializer = Materializer.createMaterializer(system)
+
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
+
+    feed.start(2).map { source =>
+      source.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t")))
+    }
+
+    probe.fishForMessage(5.seconds) {
+      case CiriumTrackableStatus(s, _, _) if s.arrivalAirportFsCode == "TST" && s.carrierFsCode == "XX2" =>
+        true
+      case CiriumTrackableStatus(s, _, _) =>
+        false
+    }
+
+    success
+  }
+
   "Given a network failure, the failed request should retry" >> {
 
-    val client = new MockClientWithFailures("https://latest")
+    val client = new MockClientWithFailures("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -161,7 +221,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given an item with invalid json, and an item with valid json, I should see the valid item in the sink." >> {
 
-    val client = new MockClientWithInvalidJson("https://latest")
+    val client = new MockClientWithInvalidJson("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -195,6 +255,16 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |}
     """.stripMargin
 
+  val back1WithoutRequestObjectHop: String =
+    """
+      |{
+      |    "items": [
+      |        "https://item/1",
+      |        "https://item/2"
+      |    ]
+      |}
+    """.stripMargin
+
   val back1hop: String =
     """
       |{
@@ -213,6 +283,17 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |    "items": [
       |        "https://item/1",
       |        "https://item/2"
+      |    ]
+      |}
+    """.stripMargin
+
+  val forwardWithoutRequestObject1: String =
+    """
+      |{
+      |    "items": [
+      |        "https://item/2",
+      |        "https://item/3",
+      |        "https://item/4"
       |    ]
       |}
     """.stripMargin
@@ -297,6 +378,91 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
        |            "carrierFsCode": "ERROR",
        |            "operatingCarrierFsCode": "ERROR",
        |            "primaryCarrierFsCode": "ERROR",
+       |            "flightStatusUpdates": [],
+       |            "irregularOperations": []
+       |        }
+       |    ]
+       |}
+    """.stripMargin
+
+  def flightStatusResponseWithoutRequestObject(carrierCode: String, item: String): String =
+    s"""
+       |{
+       |    "flightStatuses": [
+       |        {
+       |            "flightId": 100000,
+       |            "carrierFsCode": "$carrierCode",
+       |            "operatingCarrierFsCode": "$carrierCode",
+       |            "primaryCarrierFsCode": "$carrierCode",
+       |            "flightNumber": "1000",
+       |            "departureAirportFsCode": "$carrierCode",
+       |            "arrivalAirportFsCode": "TST",
+       |            "departureDate": {
+       |                "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                "dateLocal": "2019-07-15T10:10:00.000"
+       |            },
+       |            "arrivalDate": {
+       |                "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                "dateLocal": "2019-07-15T13:05:00.000"
+       |            },
+       |            "status": "A",
+       |            "schedule": {
+       |                "flightType": "J",
+       |                "serviceClasses": "XXXX",
+       |                "restrictions": "",
+       |                "uplines": [],
+       |                "downlines": []
+       |            },
+       |            "operationalTimes": {
+       |                "publishedDeparture": {
+       |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:10:00.000"
+       |                },
+       |                "scheduledGateDeparture": {
+       |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:10:00.000"
+       |                },
+       |                "estimatedRunwayDeparture": {
+       |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:37:00.000"
+       |                },
+       |                "actualRunwayDeparture": {
+       |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+       |                    "dateLocal": "2019-07-15T10:37:00.000"
+       |                },
+       |                "publishedArrival": {
+       |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                    "dateLocal": "2019-07-15T13:05:00.000"
+       |                },
+       |                "scheduledGateArrival": {
+       |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+       |                    "dateLocal": "2019-07-15T13:05:00.000"
+       |                }
+       |            },
+       |            "codeshares": [
+       |                {
+       |                    "fsCode": "CZ",
+       |                    "flightNumber": "1000",
+       |                    "relationship": "L"
+       |                },
+       |                {
+       |                    "fsCode": "DL",
+       |                    "flightNumber": "2000",
+       |                    "relationship": "L"
+       |                }
+       |            ],
+       |            "delays": {},
+       |            "flightDurations": {
+       |                "scheduledBlockMinutes": 115
+       |            },
+       |            "airportResources": {
+       |                "arrivalTerminal": "A"
+       |            },
+       |            "flightEquipment": {
+       |                "scheduledEquipmentIataCode": "XXX",
+       |                "actualEquipmentIataCode": "XXX",
+       |                "tailNumber": "Z-ZZZZ"
+       |            },
        |            "flightStatusUpdates": [],
        |            "irregularOperations": []
        |        }

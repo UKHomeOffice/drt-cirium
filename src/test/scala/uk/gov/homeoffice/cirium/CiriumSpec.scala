@@ -36,7 +36,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     val client = new Cirium.ProdClient(
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
-      sys.env("CIRIUM_APP_ENTRY_POINT"))
+      sys.env("CIRIUM_APP_ENTRY_POINT"),
+      MockMetricsCollector)
     val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
@@ -52,7 +53,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the initial response" >> {
 
-    val client = new MockClient(initialResponse)
+    val client = new MockClient(initialResponse, MockMetricsCollector)
     val result = Await.result(client.initialRequest(), 1.second)
 
     val expected = CiriumInitialResponse(
@@ -63,7 +64,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse to the item list response" >> {
 
-    val client = new MockClient(itemListResponse)
+    val client = new MockClient(itemListResponse, MockMetricsCollector)
     val result = Await.result(client.backwards("test", 2), 1.second)
 
     val expected = CiriumItemListResponse(List(
@@ -75,7 +76,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
   "I should be able to parse a flight status response" >> {
 
-    val client = new MockClient(flightStatusResponse)
+    val client = new MockClient(flightStatusResponse, MockMetricsCollector)
     val result = Await.result(client.requestItem("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
@@ -132,6 +133,12 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           Seq()))))
 
     result === expected
+  }
+
+  "I should get exception while parsing response that does not have request object" >> {
+    val client = new MockClient(flightStatusResponseWithoutRequestObject, MockMetricsCollector)
+    val result = Await.result(client.requestItem("endpoint"), 1.second)
+    result.isInstanceOf[CiriumFlightStatusResponseFailure]
   }
 
   def initialResponse: String =
@@ -262,9 +269,97 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |    ]
       |}
     """.stripMargin
+
+  def flightStatusResponseWithoutRequestObject: String =
+    """
+      |{
+      |    "flightStatuses": [
+      |        {
+      |            "flightId": 100000,
+      |            "carrierFsCode": "TST",
+      |            "operatingCarrierFsCode": "TST",
+      |            "primaryCarrierFsCode": "TST",
+      |            "flightNumber": "1000",
+      |            "departureAirportFsCode": "TST",
+      |            "arrivalAirportFsCode": "LHR",
+      |            "departureDate": {
+      |                "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                "dateLocal": "2019-07-15T10:10:00.000"
+      |            },
+      |            "arrivalDate": {
+      |                "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                "dateLocal": "2019-07-15T13:05:00.000"
+      |            },
+      |            "status": "A",
+      |            "schedule": {
+      |                "flightType": "J",
+      |                "serviceClasses": "XXXX",
+      |                "restrictions": "",
+      |                "uplines": [],
+      |                "downlines": []
+      |            },
+      |            "operationalTimes": {
+      |                "publishedDeparture": {
+      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:10:00.000"
+      |                },
+      |                "scheduledGateDeparture": {
+      |                    "dateUtc": "2019-07-15T09:10:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:10:00.000"
+      |                },
+      |                "estimatedRunwayDeparture": {
+      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:37:00.000"
+      |                },
+      |                "actualRunwayDeparture": {
+      |                    "dateUtc": "2019-07-15T09:37:00.000Z",
+      |                    "dateLocal": "2019-07-15T10:37:00.000"
+      |                },
+      |                "publishedArrival": {
+      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                    "dateLocal": "2019-07-15T13:05:00.000"
+      |                },
+      |                "scheduledGateArrival": {
+      |                    "dateUtc": "2019-07-15T11:05:00.000Z",
+      |                    "dateLocal": "2019-07-15T13:05:00.000"
+      |                }
+      |            },
+      |            "codeshares": [
+      |                {
+      |                    "fsCode": "CZ",
+      |                    "flightNumber": "1000",
+      |                    "relationship": "L"
+      |                },
+      |                {
+      |                    "fsCode": "DL",
+      |                    "flightNumber": "2000",
+      |                    "relationship": "L"
+      |                }
+      |            ],
+      |            "delays": {
+      |                "departureGateDelayMinutes": 5,
+      |                "arrivalGateDelayMinutes": 6
+      |            },
+      |            "flightDurations": {
+      |                "scheduledBlockMinutes": 115
+      |            },
+      |            "airportResources": {
+      |                "arrivalTerminal": "A"
+      |            },
+      |            "flightEquipment": {
+      |                "scheduledEquipmentIataCode": "XXX",
+      |                "actualEquipmentIataCode": "XXX",
+      |                "tailNumber": "Z-ZZZZ"
+      |            },
+      |            "flightStatusUpdates": [],
+      |            "irregularOperations": []
+      |        }
+      |    ]
+      |}
+  """.stripMargin
 }
 
-class MockClient(mockResponse: String)(implicit system: ActorSystem) extends Cirium.Client("", "", "") {
+class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", "", metricsCollector) {
   def sendReceive(endpoint: Uri): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }

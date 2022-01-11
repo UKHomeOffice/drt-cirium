@@ -11,6 +11,7 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import uk.gov.homeoffice.cirium.MetricsCollector
 import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,7 +38,7 @@ trait CiriumClientLike {
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends CiriumClientLike {
+  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends CiriumClientLike {
 
     implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
@@ -67,6 +68,7 @@ object Cirium {
         .recover {
           case error: Throwable =>
             log.error(s"Error parsing Cirium response from $uri", error)
+            metricsCollector.errorCounterMetric("requestAndUnmarshal-CiriumItemListResponse")
             CiriumItemListResponse.empty
         }
 
@@ -86,13 +88,14 @@ object Cirium {
         .to[CiriumFlightStatusResponseSuccess]
         .recover {
           case error: Throwable =>
-            log.error(s"Error parsing Cirium response from $endpoint", error)
+            log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint", error)
+            metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
             CiriumFlightStatusResponseFailure(error)
         }
     })
   }
 
-  class ProdClient(appId: String, appKey: String, entryPoint: String)(implicit system: ActorSystem) extends Client(appId, appKey, entryPoint) {
+  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Client(appId, appKey, entryPoint, metricsCollector) {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
@@ -187,7 +190,7 @@ trait BackwardsStrategy {
   def backUntil(startItem: String): Future[String]
 }
 
-case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime) extends BackwardsStrategy {
+case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
   private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
@@ -206,6 +209,7 @@ case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime)
           }
         case _ =>
           log.error(s"Failed to extract the date from $firstItem")
+          metricsCollector.errorCounterMetric("backUntil-dateFromFirstItem")
           Future.failed(new Exception(s"Failed to extract the date from $firstItem"))
       }
     }

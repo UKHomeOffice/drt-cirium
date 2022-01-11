@@ -24,4 +24,10 @@ object AppConfig {
 
   val ciriumAppEntryPoint: String = config.getString("cirium-feed.entry-point")
 
+   val statsdHost: String = config.getString("statsd.host")
+
+   val statsdPort: Int = config.getInt("statsd.port")
+
+   val statsdPrefix: String = config.getString("statsd.prefix")
+
 }
