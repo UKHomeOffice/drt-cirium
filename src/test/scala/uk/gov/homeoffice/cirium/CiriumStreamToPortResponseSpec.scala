@@ -12,8 +12,7 @@ import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
@@ -33,7 +32,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+    def sendReceive(endpoint: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = {
 
       val res = endpoint.toString() match {
         case latestRegex() =>
@@ -66,7 +65,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+    def sendReceive(endpoint: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = {
 
       val res = endpoint.toString() match {
         case latestRegex() =>
@@ -97,7 +96,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
     var calls = 0
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+    def sendReceive(endpoint: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = Future {
 
       endpoint.toString() match {
         case "https://latest?appId=&appKey=" =>
@@ -123,7 +122,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+    def sendReceive(endpoint: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = Future {
 
       endpoint.toString() match {
         case "https://latest?appId=&appKey=" =>
@@ -151,7 +150,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val probe = TestProbe()
 
     implicit val mat: Materializer = Materializer.createMaterializer(system)
-
+    implicit val executionContext = mat.executionContext
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
 
@@ -176,6 +175,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val probe = TestProbe()
 
     implicit val mat: Materializer = Materializer.createMaterializer(system)
+    implicit val executionContext = mat.executionContext
 
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
@@ -201,6 +201,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val probe = TestProbe()
 
     implicit val mat: Materializer = Materializer.createMaterializer(system)
+    implicit val executionContext = mat.executionContext
 
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
@@ -226,6 +227,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val probe = TestProbe()
 
     implicit val mat: Materializer = Materializer.createMaterializer(system)
+    implicit val executionContext = mat.executionContext
 
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
