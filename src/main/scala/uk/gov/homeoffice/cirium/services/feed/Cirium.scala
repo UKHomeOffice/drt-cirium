@@ -14,37 +14,36 @@ import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.MetricsCollector
 import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
 trait CiriumClientLike {
-  def initialRequest()(implicit executionContext: ExecutionContext): Future[CiriumInitialResponse]
+  def initialRequest(): Future[CiriumInitialResponse]
 
-  def backwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse]
+  def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse]
 
-  def forwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse]
+  def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse]
 
-  def makeRequest(endpoint: String)(implicit executionContext: ExecutionContext): Future[HttpResponse]
+  def makeRequest(endpoint: String): Future[HttpResponse]
 
-  def sendReceive(uri: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse]
+  def sendReceive(uri: Uri): Future[HttpResponse]
 
-  def requestItem(endpoint: String)(implicit executionContext: ExecutionContext): Future[CiriumFlightStatusResponse]
+  def requestItem(endpoint: String): Future[CiriumFlightStatusResponse]
 
 }
 
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends CiriumClientLike {
+  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {
 
     implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
     import uk.gov.homeoffice.cirium.JsonSupport._
 
-    def initialRequest()(implicit ec: ExecutionContext): Future[CiriumInitialResponse] = {
+    def initialRequest(): Future[CiriumInitialResponse] = {
       makeRequest(entryPoint).flatMap { res =>
         Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
           case e =>
@@ -54,13 +53,13 @@ object Cirium {
       }
     }
 
-    def backwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] =
+    def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
       requestAndUnmarshal(latestItemLocation + s"/previous/$step")
 
-    def forwards(latestItemLocation: String, step: Int = 1000)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] =
+    def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
       requestAndUnmarshal(latestItemLocation + s"/next/$step")
 
-    private def requestAndUnmarshal(uri: String)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] =
+    private def requestAndUnmarshal(uri: String): Future[CiriumItemListResponse] =
       makeRequest(uri)
         .flatMap(res => {
           val eventualResponse = Unmarshal[HttpResponse](res).to[CiriumItemListResponse]
@@ -79,7 +78,7 @@ object Cirium {
             CiriumItemListResponse.empty
         }
 
-    def makeRequest(endpoint: String)(implicit executionContext: ExecutionContext): Future[HttpResponse] = {
+    def makeRequest(endpoint: String): Future[HttpResponse] = {
       Retry.retry(
         sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
         Retry.fibonacciDelay,
@@ -93,9 +92,9 @@ object Cirium {
       }
     }
 
-    def sendReceive(uri: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse]
+    def sendReceive(uri: Uri): Future[HttpResponse]
 
-    def requestItem(endpoint: String)(implicit executionContext: ExecutionContext): Future[CiriumFlightStatusResponse] = makeRequest(endpoint).flatMap(res => {
+    def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint).flatMap(res => {
       res.status match {
         case StatusCodes.OK =>
           Unmarshal[HttpResponse](res)
@@ -111,8 +110,8 @@ object Cirium {
     })
   }
 
-  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Client(appId, appKey, entryPoint, metricsCollector) {
-    override def sendReceive(uri: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
+  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
+    override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
   case object Ask
@@ -204,14 +203,14 @@ object Cirium {
 }
 
 trait BackwardsStrategy {
-  def backUntil(startItem: String)(implicit executionContext: ExecutionContext): Future[String]
+  def backUntil(startItem: String): Future[String]
 }
 
-case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector) extends BackwardsStrategy {
+case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
   private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
-  def backUntil(startItem: String)(implicit executionContext: ExecutionContext): Future[String] = {
+  def backUntil(startItem: String): Future[String] = {
     client.backwards(startItem, 1000).flatMap { c =>
       val firstItem = c.items.head
       firstItem match {

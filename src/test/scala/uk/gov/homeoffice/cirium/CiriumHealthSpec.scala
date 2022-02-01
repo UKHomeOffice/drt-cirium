@@ -10,7 +10,7 @@ import uk.gov.homeoffice.cirium.services.health.{AppHealthCheck, CiriumAppHealth
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
 class CiriumHealthSpec extends Specification {
@@ -174,33 +174,33 @@ class CiriumHealthSpec extends Specification {
 
   case class MockClientWithInitialResponseOnly(firstItemLink: String) extends CiriumClientLike {
 
-    override def initialRequest()(implicit executionContext: ExecutionContext): Future[CiriumInitialResponse] = Future(
-      CiriumInitialResponse(CiriumRequestMetaData("", None, None, ""), firstItemLink))(executionContext)
+    override def initialRequest(): Future[CiriumInitialResponse] = Future(
+      CiriumInitialResponse(CiriumRequestMetaData("", None, None, ""), firstItemLink))
 
-    override def backwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] = ???
+    override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-    override def forwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] = ???
+    override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-    override def makeRequest(endpoint: String)(implicit executionContext: ExecutionContext): Future[HttpResponse] = ???
+    override def makeRequest(endpoint: String): Future[HttpResponse] = ???
 
-    override def sendReceive(uri: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = ???
+    override def sendReceive(uri: Uri): Future[HttpResponse] = ???
 
-    override def requestItem(endpoint: String)(implicit executionContext: ExecutionContext): Future[CiriumFlightStatusResponseSuccess] = ???
+    override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
   }
 
   case class MockClientWithFailure(firstItemLink: String) extends CiriumClientLike {
 
-    override def initialRequest()(implicit executionContext: ExecutionContext): Future[CiriumInitialResponse] = Future(throw new Exception("Unable to connect"))(executionContext)
+    override def initialRequest(): Future[CiriumInitialResponse] = Future(throw new Exception("Unable to connect"))
 
-    override def backwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] = ???
+    override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-    override def forwards(latestItemLocation: String, step: Int)(implicit executionContext: ExecutionContext): Future[CiriumItemListResponse] = ???
+    override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-    override def makeRequest(endpoint: String)(implicit executionContext: ExecutionContext): Future[HttpResponse] = ???
+    override def makeRequest(endpoint: String): Future[HttpResponse] = ???
 
-    override def sendReceive(uri: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = ???
+    override def sendReceive(uri: Uri): Future[HttpResponse] = ???
 
-    override def requestItem(endpoint: String)(implicit executionContext: ExecutionContext): Future[CiriumFlightStatusResponseSuccess] = ???
+    override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
   }
 
 }

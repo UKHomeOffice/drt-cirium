@@ -15,8 +15,8 @@ import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-case class MockBackwardsStrategy(url: String) extends BackwardsStrategy {
-  override def backUntil(startItem: String)(implicit executionContext: ExecutionContext): Future[String] = Future.successful(url)
+case class MockBackwardsStrategy(url: String)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
+  override def backUntil(startItem: String): Future[String] = Future.successful(url)
 }
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
@@ -28,7 +28,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
   implicit val mat: Materializer = Materializer.createMaterializer(system)
-  implicit val ec  = mat.executionContext
+  implicit val ec = mat.executionContext
 
   "I should be able to connect to the feed and see what happens" >> {
     skipped("connectivity tester")
@@ -359,8 +359,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   """.stripMargin
 }
 
-class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Cirium.Client("", "", "", metricsCollector) {
-  def sendReceive(endpoint: Uri)(implicit executionContext: ExecutionContext): Future[HttpResponse] = {
-    Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))(executionContext)
+class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", "", metricsCollector) {
+  def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+    Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }
 }
