@@ -138,7 +138,7 @@ object Cirium {
     }
   }
 
-  case class Feed(client: CiriumClientLike, pollEveryMillis: Int, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem) {
+  case class Feed(client: CiriumClientLike, pollEveryMillis: Int, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
     val latestItemActor: ActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
