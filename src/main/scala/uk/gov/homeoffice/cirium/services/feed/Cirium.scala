@@ -143,7 +143,7 @@ object Cirium {
 
     val latestItemActor: ActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(step: Int)(implicit executionContext: ExecutionContext): Future[Source[CiriumTrackableStatus, Cancellable]] = {
+    def start(step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] = {
       val startingPoint = client
         .initialRequest()
         .flatMap(crp => backwardsStrategy.backUntil(crp.item))
@@ -151,7 +151,7 @@ object Cirium {
       tick(startingPoint, step)
     }
 
-    def tick(start: Future[String], step: Int)(implicit executionContext: ExecutionContext): Future[Source[CiriumTrackableStatus, Cancellable]] =
+    def tick(start: Future[String], step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] =
       start
         .map(s => latestItemActor ? LatestItem(s))
         .map { _ =>
