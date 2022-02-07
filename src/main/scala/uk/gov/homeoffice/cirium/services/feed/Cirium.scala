@@ -1,9 +1,9 @@
 package uk.gov.homeoffice.cirium.services.feed
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, Scheduler}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
 import akka.stream.Materializer
@@ -14,9 +14,8 @@ import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.MetricsCollector
 import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
@@ -38,14 +37,21 @@ trait CiriumClientLike {
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends CiriumClientLike {
+  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {
 
     implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
     import uk.gov.homeoffice.cirium.JsonSupport._
 
-    def initialRequest(): Future[CiriumInitialResponse] =
-      makeRequest(entryPoint).flatMap(res => Unmarshal[HttpResponse](res).to[CiriumInitialResponse])
+    def initialRequest(): Future[CiriumInitialResponse] = {
+      makeRequest(entryPoint).flatMap { res =>
+        Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
+          case e =>
+            log.error(s"Error while parsing initialRequest", e)
+            Future.failed(new Exception(s"Error while making InitialRequest", e))
+        }
+      }
+    }
 
     def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
       requestAndUnmarshal(latestItemLocation + s"/previous/$step")
@@ -73,29 +79,38 @@ object Cirium {
         }
 
     def makeRequest(endpoint: String): Future[HttpResponse] = {
-      implicit val s: Scheduler = system.scheduler
       Retry.retry(
         sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
         Retry.fibonacciDelay,
         10,
-        5.seconds)
+        5.seconds).flatMap { response =>
+        response.status match {
+          case StatusCodes.OK => Future.successful(response)
+          case status => log.warn(s"Status of http response is not 200 Ok $status")
+            Future.failed(new Exception(s"$status status while cirium request"))
+        }
+      }
     }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
 
     def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint).flatMap(res => {
-      Unmarshal[HttpResponse](res)
-        .to[CiriumFlightStatusResponseSuccess]
-        .recover {
-          case error: Throwable =>
-            log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint", error)
-            metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
-            CiriumFlightStatusResponseFailure(error)
-        }
+      res.status match {
+        case StatusCodes.OK =>
+          Unmarshal[HttpResponse](res)
+            .to[CiriumFlightStatusResponseSuccess].recover {
+            case error: Throwable =>
+              log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint", error)
+              metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
+              CiriumFlightStatusResponseFailure(error)
+          }
+        case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
+          Future.failed(new Exception(s"Unable to get valid response $res"))
+      }
     })
   }
 
-  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem) extends Client(appId, appKey, entryPoint, metricsCollector) {
+  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
@@ -156,6 +171,7 @@ object Cirium {
                 if (r.items.nonEmpty) {
                   (latestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
                 } else {
+                  log.warn(s"Not items in api $s")
                   Future.successful(List())
                 }
               })
@@ -190,7 +206,7 @@ trait BackwardsStrategy {
   def backUntil(startItem: String): Future[String]
 }
 
-case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector) extends BackwardsStrategy {
+case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
   private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
