@@ -47,13 +47,13 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   val targetTime = new DateTime().minus(AppConfig.goBackHours.hours.toMillis)
 
-  val feed = Cirium.Feed(client, pollEveryMillis = pollIntervalMillis, BackwardsStrategyImpl(client, targetTime, metricsCollector))
+  val feed = Cirium.Feed(client, pollInterval, BackwardsStrategyImpl(client, targetTime, metricsCollector))
 
   val stepSize = 1000
 
-  feed.start(step = stepSize).map(source => {
-    source.runWith(Sink.actorRef(flightStatusActor, "complete", t => log.error("Failure", t)))
-  })
+  feed
+    .start(step = stepSize)
+    .map(_.runWith(Sink.actorRef(flightStatusActor, "complete", t => log.error("Failure", t))))
 
   lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes ~ appStatusRoutes ~ flightScheduledRoute
 
