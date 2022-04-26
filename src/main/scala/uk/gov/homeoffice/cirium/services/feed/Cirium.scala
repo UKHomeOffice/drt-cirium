@@ -58,7 +58,7 @@ object Cirium {
     def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
       requestAndUnmarshal(latestItemLocation + s"/next/$step")
 
-    private def requestAndUnmarshal(uri: String): Future[CiriumItemListResponse] = {
+    private def requestAndUnmarshal(uri: String): Future[CiriumItemListResponse] =
       makeRequest(uri)
         .flatMap(res => {
           val eventualResponse = Unmarshal[HttpResponse](res).to[CiriumItemListResponse]
@@ -76,24 +76,20 @@ object Cirium {
             metricsCollector.errorCounterMetric("requestAndUnmarshal-CiriumItemListResponse")
             CiriumItemListResponse.empty
         }
-    }
 
-    def makeRequest(endpoint: String): Future[HttpResponse] = {
-      val startTime = new DateTime()
+    def makeRequest(endpoint: String): Future[HttpResponse] =
       Retry
         .retry(
           sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
           Retry.fibonacciDelay, 10, 5.seconds
         )
         .flatMap { response =>
-//          log.info(s"Request took ${new DateTime().getMillis - startTime.getMillis}ms. $endpoint")
           response.status match {
             case StatusCodes.OK => Future.successful(response)
             case status => log.warn(s"Status of http response is not 200 Ok $status")
               Future.failed(new Exception(s"$status status while cirium request"))
           }
         }
-    }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
 
