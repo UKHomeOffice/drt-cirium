@@ -1,18 +1,18 @@
 lazy val akkaHttpVersion = "10.2.6"
 lazy val akkaVersion = "2.6.8"
-lazy val specs2 = "4.6.0"
-lazy val jodaTime = "2.9.4"
+lazy val specs2Version = "4.6.0"
+lazy val jodaTimeVersion = "2.9.4"
 lazy val logBackClassicVersion = "1.2.3"
 lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.10.0"
-val censorinus = "2.1.16"
+lazy val censorinusVersion = "2.1.16"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "uk.gov.homeoffice",
-      scalaVersion := "2.13.6",
     )),
+    crossScalaVersions := Seq("2.13.8", "2.12.15"),
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
 
@@ -20,13 +20,13 @@ lazy val root = (project in file(".")).
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
 
     libraryDependencies ++= Seq(
-      "com.github.gphat" %% "censorinus" % censorinus,
+      "com.github.gphat" %% "censorinus" % censorinusVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "ch.qos.logback" % "logback-classic" % logBackClassicVersion,
-      "joda-time" % "joda-time" % jodaTime,
+      "joda-time" % "joda-time" % jodaTimeVersion,
 
       "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
       "ch.qos.logback.contrib" % "logback-jackson" % logbackContribVersion,
@@ -36,7 +36,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-      "org.specs2" %% "specs2-core" % specs2 % Test
+      "org.specs2" %% "specs2-core" % specs2Version % Test
     )
   )
   .enablePlugins(DockerPlugin)

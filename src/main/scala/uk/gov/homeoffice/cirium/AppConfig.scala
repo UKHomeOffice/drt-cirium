@@ -2,6 +2,8 @@ package uk.gov.homeoffice.cirium
 
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+
 object AppConfig {
 
   private val config = ConfigFactory.load()
@@ -10,7 +12,7 @@ object AppConfig {
 
   val portCodes: Array[String] = config.getString("drt-cirium.port-codes").split(",")
 
-  val pollIntervalMillis: Int = config.getInt("drt-cirium.poll-interval-millis")
+  val pollInterval: FiniteDuration = config.getInt("drt-cirium.poll-interval-millis").millis
 
   val flightRetentionHours: Int = config.getInt("drt-cirium.flight-retention-hours")
 

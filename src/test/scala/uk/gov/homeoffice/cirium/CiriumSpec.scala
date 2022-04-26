@@ -13,10 +13,10 @@ import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
 case class MockBackwardsStrategy(url: String)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
-  override def backUntil(startItem: String): Future[String] = Future.successful(url)
+  override def backwardsFrom(startItem: String): Future[String] = Future.successful(url)
 }
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
@@ -28,7 +28,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
   implicit val mat: Materializer = Materializer.createMaterializer(system)
-  implicit val ec = mat.executionContext
+  implicit val ec: ExecutionContextExecutor = mat.executionContext
 
   "I should be able to connect to the feed and see what happens" >> {
     skipped("connectivity tester")
@@ -38,7 +38,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
       MockMetricsCollector)
-    val feed = Cirium.Feed(client, pollEveryMillis = 100, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
 
     feed.start(1000).map { source =>

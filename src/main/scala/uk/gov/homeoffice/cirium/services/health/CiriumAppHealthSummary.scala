@@ -107,7 +107,7 @@ case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
       .recover {
         case e: Throwable =>
           metricsCollector.errorCounterMetric("latestMessageDateTime")
-          log.error("Failed to connect to cirium", e)
+          log.error(s"Failed to connect to cirium: ${e.getMessage}")
           None
       }
 }

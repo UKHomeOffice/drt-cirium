@@ -9,8 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object Retry {
   private val log = LoggerFactory.getLogger(getClass)
-  val fibonacciDelay: LazyList[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacciDelay zip fibonacciDelay.tail)
-    .map { t => t._1 + t._2 }
+  val fibonacciDelay: Stream[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacciDelay zip fibonacciDelay.tail).map { t => t._1 + t._2 }
 
   def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], retries: Int, defaultDelay: FiniteDuration)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] =
     futureToRetry.recoverWith {

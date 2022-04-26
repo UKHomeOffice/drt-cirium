@@ -1,21 +1,20 @@
 package uk.gov.homeoffice.cirium.services.feed
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.MetricsCollector
-import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, _}
+import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
@@ -66,31 +65,31 @@ object Cirium {
           eventualResponse.onComplete {
             case Success(v) => v
             case Failure(exception) =>
-              log.error(s"Error parsing Cirium response from $uri. Response was ${Await.result(res.entity.dataBytes.runFold("") { case (a, b) => a + b.utf8String }, 1.second)}", exception)
+              log.error(s"Error parsing Cirium response from $uri: ${exception.getMessage}")
               Future.failed(exception)
           }
           eventualResponse
         })
         .recover {
           case error: Throwable =>
-            log.error(s"Error parsing Cirium response from $uri", error)
+            log.error(s"Failed to get a response from cirium end point: ${error.getMessage}")
             metricsCollector.errorCounterMetric("requestAndUnmarshal-CiriumItemListResponse")
             CiriumItemListResponse.empty
         }
 
-    def makeRequest(endpoint: String): Future[HttpResponse] = {
-      Retry.retry(
-        sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
-        Retry.fibonacciDelay,
-        10,
-        5.seconds).flatMap { response =>
-        response.status match {
-          case StatusCodes.OK => Future.successful(response)
-          case status => log.warn(s"Status of http response is not 200 Ok $status")
-            Future.failed(new Exception(s"$status status while cirium request"))
+    def makeRequest(endpoint: String): Future[HttpResponse] =
+      Retry
+        .retry(
+          sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")),
+          Retry.fibonacciDelay, 10, 5.seconds
+        )
+        .flatMap { response =>
+          response.status match {
+            case StatusCodes.OK => Future.successful(response)
+            case status => log.warn(s"Status of http response is not 200 Ok $status")
+              Future.failed(new Exception(s"$status status while cirium request"))
+          }
         }
-      }
-    }
 
     def sendReceive(uri: Uri): Future[HttpResponse]
 
@@ -100,7 +99,7 @@ object Cirium {
           Unmarshal[HttpResponse](res)
             .to[CiriumFlightStatusResponseSuccess].recover {
             case error: Throwable =>
-              log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint", error)
+              log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
               metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
               CiriumFlightStatusResponseFailure(error)
           }
@@ -138,79 +137,57 @@ object Cirium {
     }
   }
 
-  case class Feed(client: CiriumClientLike, pollEveryMillis: Int, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
+  case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
     val latestItemActor: ActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
 
-    def start(step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] = {
-      val startingPoint = client
-        .initialRequest()
-        .flatMap(crp => backwardsStrategy.backUntil(crp.item))
-
-      tick(startingPoint, step)
+    def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] = {
+      client.initialRequest().flatMap(cir => backwardsStrategy.backwardsFrom(cir.item)).map { startUrl =>
+        Source
+          .unfoldAsync((startUrl, List[String]())) { case (url, lastStatusUrls) =>
+            client.forwards(url, step).map {
+              case CiriumItemListResponse(items) if items.isEmpty =>
+                log.info(s"No records to fetch from $url")
+                Option((url, lastStatusUrls), (url, lastStatusUrls))
+              case CiriumItemListResponse(newStatusUrls) =>
+                log.info(s"${newStatusUrls.size} records to fetch from $url")
+                Option((newStatusUrls.last, newStatusUrls), (url, lastStatusUrls))
+            }
+          }
+          .throttle(1, pollInterval)
+          .mapConcat { case (_, statusUrls) => statusUrls }
+          .mapAsync(10)(client.requestItem)
+          .collect {
+            case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
+              statuses.map(status =>
+                CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+          }
+          .mapConcat(identity)
+      }
     }
-
-    def tick(start: Future[String], step: Int): Future[Source[CiriumTrackableStatus, Cancellable]] =
-      start
-        .map(s => latestItemActor ? LatestItem(s))
-        .map { _ =>
-          val tickingSource: Source[CiriumTrackableStatus, Cancellable] = Source
-            .tick(1.milliseconds, pollEveryMillis.milliseconds, NotUsed)
-            .mapAsync(1)(_ => {
-              (latestItemActor ? Ask).map {
-                case LatestItem(endpoint) => endpoint
-                case _ => None
-              }
-            })
-            .collect {
-              case Some(s) => s
-            }
-            .mapAsync(1)(s => {
-              client.forwards(s, step).flatMap(r => {
-                if (r.items.nonEmpty) {
-                  (latestItemActor ? LatestItem(r.items.last)).map(_ => r.items)
-                } else {
-                  log.warn(s"Not items in api $s")
-                  Future.successful(List())
-                }
-              })
-            })
-            .mapConcat(identity)
-            .mapAsync(5) { item =>
-              client.requestItem(item)
-            }
-            .collect {
-              case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
-                statuses.map(status =>
-                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
-            }.mapConcat(identity)
-
-          tickingSource
-        }
   }
 
   def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
-    if (
-      Set("ABZ", "CWL", "HUY", "INV", "LBA", "SOU", "BOH", "MME", "NQY", "NWI").contains(status.arrivalAirportFsCode.toUpperCase) &&
-        status.airportResources.exists(_.arrivalTerminal.isEmpty)) {
-      status.copy(airportResources = status.airportResources.map(ar => ar.copy(arrivalTerminal = Option("T1"))))
-    } else {
-      status
-    }
-  }
+    val isSingleTerminalPort = Set("ABZ", "CWL", "HUY", "INV", "LBA", "SOU", "BOH", "MME", "NQY", "NWI")
+      .contains(status.arrivalAirportFsCode.toUpperCase)
+    val emptyTerminal = status.airportResources.exists(_.arrivalTerminal.isEmpty)
 
+    if (isSingleTerminalPort && emptyTerminal)
+      status.copy(airportResources = status.airportResources.map(ar => ar.copy(arrivalTerminal = Option("T1"))))
+    else status
+  }
 }
 
 trait BackwardsStrategy {
-  def backUntil(startItem: String): Future[String]
+  def backwardsFrom(startItem: String): Future[String]
 }
 
 case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
   private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
-  def backUntil(startItem: String): Future[String] = {
+  def backwardsFrom(startItem: String): Future[String] = {
     client.backwards(startItem, 1000).flatMap { c =>
       val firstItem = c.items.head
       firstItem match {
@@ -221,7 +198,7 @@ case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime,
             Future.successful(firstItem)
           } else {
             log.info(s"Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}")
-            backUntil(firstItem)
+            backwardsFrom(firstItem)
           }
         case _ =>
           log.error(s"Failed to extract the date from $firstItem")

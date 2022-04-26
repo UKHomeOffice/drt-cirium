@@ -1,9 +1,9 @@
 package uk.gov.homeoffice.cirium
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.{ DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
-import uk.gov.homeoffice.cirium.actors.{ CiriumFeedHealthStatus, PortFeedHealthSummary, RemovalDetails }
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse, _ }
+import spray.json.{DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
+import uk.gov.homeoffice.cirium.actors.{CiriumFeedHealthStatus, PortFeedHealthSummary, RemovalDetails}
+import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.health.CiriumAppHealthSummary
 
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
@@ -19,7 +19,25 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumOperationalTimesJsonFormat: RootJsonFormat[CiriumOperationalTimes] = jsonFormat16(CiriumOperationalTimes)
   implicit val ciriumCodeshareJsonFormat: RootJsonFormat[CiriumCodeshare] = jsonFormat3(CiriumCodeshare)
   implicit val ciriumAirportResourcesJsonFormat: RootJsonFormat[CiriumAirportResources] = jsonFormat5(CiriumAirportResources)
-  implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat16(CiriumFlightStatus)
+  implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat(
+    CiriumFlightStatus.apply,
+    "flightId",
+    "carrierFsCode",
+    "operatingCarrierFsCode",
+    "primaryCarrierFsCode",
+    "flightNumber",
+    "departureAirportFsCode",
+    "arrivalAirportFsCode",
+    "departureDate",
+    "arrivalDate",
+    "status",
+    "operationalTimes",
+    "delays",
+    "flightDurations",
+    "codeshares",
+    "airportResources",
+    "flightStatusUpdates"
+  )
   implicit val ciriumFlightStatusResponseJsonFormat: RootJsonFormat[CiriumFlightStatusResponseSuccess] = jsonFormat2(CiriumFlightStatusResponseSuccess)
   implicit val ciriumTrackableStatusJsonFormat: RootJsonFormat[CiriumTrackableStatus] = jsonFormat3(CiriumTrackableStatus)
 
