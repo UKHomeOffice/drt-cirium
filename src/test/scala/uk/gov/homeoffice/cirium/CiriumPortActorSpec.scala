@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium
 
 import akka.actor.ActorSystem
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -14,7 +14,6 @@ import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.language.postfixOps
 
 class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
@@ -29,7 +28,6 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
       CiriumPortStatusActor.props(1, () => DateTime.parse("2019-09-04T11:51:00.000Z").getMillis),
       "test-status-actor")
     implicit lazy val timeout: Timeout = 3.seconds
-    val askablePortStatusActor: AskableActorRef = portStatusActor
 
     val statusToExpire = CiriumTrackableStatus(MockFlightStatus(1, "2019-09-04T10:50:59.000Z"), "", 0L)
     val statusToKeep = CiriumTrackableStatus(MockFlightStatus(2, "2019-09-04T11:51:01.000Z"), "", 0L)
@@ -39,7 +37,7 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
     portStatusActor ! RemoveExpired
 
-    val result = Await.result(askablePortStatusActor ? GetStatuses, 1 second)
+    val result = Await.result(portStatusActor ? GetStatuses, 1.second)
     val expected = List(statusToKeep.status)
 
     result === expected
@@ -48,7 +46,7 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
 
 object MockFlightStatus {
 
-  def apply(id: Int, scheduledDate: String) = CiriumFlightStatus(
+  def apply(id: Int, scheduledDate: String): CiriumFlightStatus = CiriumFlightStatus(
     id,
     "TST",
     "TST",

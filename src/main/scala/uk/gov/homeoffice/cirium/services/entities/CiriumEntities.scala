@@ -2,7 +2,6 @@ package uk.gov.homeoffice.cirium.services.entities
 
 import akka.http.scaladsl.model.Uri
 import org.joda.time.DateTime
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
@@ -105,10 +104,24 @@ case class CiriumFlightStatus(flightId: Int,
                               codeshares: Seq[CiriumCodeshare],
                               airportResources: Option[CiriumAirportResources],
                               flightStatusUpdates: Seq[CiriumFlightStatusUpdate]) {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-  if (operationalTimes.estimatedGateArrival.nonEmpty && operationalTimes.estimatedRunwayArrival.isEmpty) {
-    log.info(s"$carrierFsCode${flightNumber} has est chox but no est runway time. TaxiInMinutes: ${flightDurations.flatMap(_.taxiInMinutes)}, TaxiOutMinutes: ${flightDurations.flatMap(_.taxiOutMinutes)}")
+  lazy val estimated: Option[Long] = {
+    (operationalTimes.estimatedRunwayArrival, operationalTimes.estimatedGateArrival) match {
+      case (Some(CiriumDate(_, _, estMillis)), _) if estMillis != arrivalDate.millis => Option(estMillis)
+      case (_, Some(CiriumDate(_, _, estChox))) if estChox != arrivalDate.millis => Option(estChox - (5 * 60 * 1000))
+      case _ => None
+    }
   }
+
+  lazy val actualTouchdown: Option[Long] = operationalTimes.actualRunwayArrival.map(_.millis)
+
+  lazy val estimatedChox: Option[Long] = {
+    operationalTimes.estimatedGateArrival match {
+      case Some(CiriumDate(_, _, estChox)) if estChox != arrivalDate.millis => Option(estChox)
+      case _ => None
+    }
+  }
+
+  lazy val actualChox: Option[Long] = operationalTimes.actualGateArrival.map(_.millis)
 }
 
 case class CiriumTrackableStatus(status: CiriumFlightStatus, messageUri: String, processedMillis: Long) {
