@@ -1,7 +1,8 @@
 package uk.gov.homeoffice.cirium.services.entities
 
 import akka.http.scaladsl.model.Uri
-import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
@@ -45,6 +46,12 @@ object CiriumDate {
     dateUtc,
     dateLocal,
     DateTime.parse(dateUtc).getMillis)
+
+  def apply(dateStr: String): CiriumDate = {
+    val date = DateTime.parse(dateStr)
+    val localDate = ISODateTimeFormat.dateTime().print(date.withZone(DateTimeZone.forID("Europe/London")))
+    CiriumDate(dateStr, Option(localDate), date.getMillis)
+  }
 }
 
 case class CiriumCodeshare(fsCode: String, flightNumber: String, relationship: String)
