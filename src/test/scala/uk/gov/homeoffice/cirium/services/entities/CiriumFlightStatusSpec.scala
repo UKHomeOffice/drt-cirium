@@ -36,16 +36,24 @@ class CiriumFlightStatusSpec extends Specification {
     }
 
     "Give no estimated chox when it has no estimated gate" in {
-      val cfs = Generator.ciriumFlightStatus(sch = scheduled, estGate = "")
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, estRunway = actualRunway, estGate = "")
       cfs.estimatedChox should ===(None)
     }
-    "Give no estimated time when its estimated gate time is the same as scheduled" in {
-      val cfs = Generator.ciriumFlightStatus(sch = scheduled, estGate = scheduled)
+    "Give no estimated chox when its estimated gate time is the same as scheduled" in {
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, estRunway = actualRunway, estGate = scheduled)
       cfs.estimatedChox should ===(None)
     }
-    "Give an estimated time when its estimated gate time is different to scheduled" in {
-      val cfs = Generator.ciriumFlightStatus(sch = scheduled, estGate = estimatedGate)
+    "Give no estimated chox when it has no actual runway time even if est gate is different to scheduled" in {
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, actRunway = "", estGate = estimatedGate)
+      cfs.estimatedChox should ===(None)
+    }
+    "Give an estimated chox when its estimated gate time is different to scheduled and it has an act runway" in {
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, actRunway = actualRunway, estGate = estimatedGate)
       cfs.estimatedChox should ===(Option(DateTime.parse(estimatedGate).getMillis))
+    }
+    "Give an estimated chox when it has an act runway even if the estimated gate time is the same as the scheduled time" in {
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, actRunway = actualRunway, estGate = scheduled)
+      cfs.estimatedChox should ===(Option(DateTime.parse(scheduled).getMillis))
     }
 
     "Give an actual chox when it has an actual gate" in {
