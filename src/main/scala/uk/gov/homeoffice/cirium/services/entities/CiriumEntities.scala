@@ -123,8 +123,10 @@ case class CiriumFlightStatus(flightId: Int,
 
   lazy val estimatedChox: Option[Long] = {
     (operationalTimes.actualRunwayArrival, operationalTimes.estimatedGateArrival) match {
-      case (Some(_), Some(CiriumDate(_, _, estChox))) if estChox != arrivalDate.millis => Option(estChox)
-      case _ => None
+      case (Some(_), Some(CiriumDate(_, _, estChox))) =>
+        Option(estChox)
+      case _ =>
+        None
     }
   }
 

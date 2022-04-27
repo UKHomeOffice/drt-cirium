@@ -51,6 +51,10 @@ class CiriumFlightStatusSpec extends Specification {
       val cfs = Generator.ciriumFlightStatus(sch = scheduled, actRunway = actualRunway, estGate = estimatedGate)
       cfs.estimatedChox should ===(Option(DateTime.parse(estimatedGate).getMillis))
     }
+    "Give an estimated chox when it has an act runway even if the estimated gate time is the same as the scheduled time" in {
+      val cfs = Generator.ciriumFlightStatus(sch = scheduled, actRunway = actualRunway, estGate = scheduled)
+      cfs.estimatedChox should ===(Option(DateTime.parse(scheduled).getMillis))
+    }
 
     "Give an actual chox when it has an actual gate" in {
       val cfs = Generator.ciriumFlightStatus(sch = scheduled, actGate = actualGate)
