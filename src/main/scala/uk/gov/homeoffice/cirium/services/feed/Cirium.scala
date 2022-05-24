@@ -169,7 +169,7 @@ object Cirium {
   }
 
   def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
-    val isSingleTerminalPort = Set("ABZ", "CWL", "HUY", "INV", "LBA", "SOU", "BOH", "MME", "NQY", "NWI")
+    val isSingleTerminalPort = Set("ABZ", "CWL", "HUY", "INV", "LBA", "SEN", "SOU", "BOH", "MME", "NQY", "NWI")
       .contains(status.arrivalAirportFsCode.toUpperCase)
     val emptyTerminal = status.airportResources.exists(_.arrivalTerminal.isEmpty)
 
