@@ -9,11 +9,11 @@ import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor
-import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
+import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseFailure, CiriumTrackableStatus}
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.matching.Regex
 
 class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
@@ -53,6 +53,12 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
       res
     }
+  }
+
+  class MockClientWith500Response(startUri: String, metricsCollector: MetricsCollector)
+                                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, metricsCollector) {
+    def sendReceive(endpoint: Uri): Future[HttpResponse] =
+      Future(HttpResponse(500, Nil, HttpEntity(ContentTypes.`application/json`, "Boom")))
   }
 
   class MockClientWithoutRequestObjectInResponse(startUri: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, metricsCollector) {
@@ -143,9 +149,10 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  implicit val mat: Materializer = Materializer.createMaterializer(system)
+  implicit val executionContext: ExecutionContextExecutor = mat.executionContext
+
   "Given a stream of messages, each should end up in the correct port" >> {
-    implicit val mat: Materializer = Materializer.createMaterializer(system)
-    implicit val executionContext: ExecutionContextExecutor = mat.executionContext
     val client = new MockClient("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
@@ -169,8 +176,6 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   "Given a stream of messages, each should end up in the correct port even if request object is missing in json response" >> {
-    implicit val mat: Materializer = Materializer.createMaterializer(system)
-    implicit val executionContext: ExecutionContextExecutor = mat.executionContext
     val client = new MockClientWithoutRequestObjectInResponse("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
@@ -194,13 +199,9 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   "Given a network failure, the failed request should retry" >> {
-    implicit val mat: Materializer = Materializer.createMaterializer(system)
-    implicit val executionContext: ExecutionContextExecutor = mat.executionContext
-
     val client = new MockClientWithFailures("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
-
 
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
@@ -220,13 +221,9 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   "Given an item with invalid json, and an item with valid json, I should see the valid item in the sink." >> {
-    implicit val mat: Materializer = Materializer.createMaterializer(system)
-    implicit val executionContext: ExecutionContextExecutor = mat.executionContext
-
     val client = new MockClientWithInvalidJson("https://latest", MockMetricsCollector)
     val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()
-
 
     val flightStatusActor: ActorRef = system
       .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
@@ -243,6 +240,11 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
 
     success
+  }
+
+  "Given a 500 response, I should get a failed response" >> {
+    val client = new MockClientWith500Response("", MockMetricsCollector)
+    Await.result(client.requestItem(""), 1.second).getClass === classOf[CiriumFlightStatusResponseFailure]
   }
 
   val initialResponse: String =
