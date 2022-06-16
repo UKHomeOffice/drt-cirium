@@ -93,20 +93,26 @@ object Cirium {
 
     def sendReceive(uri: Uri): Future[HttpResponse]
 
-    def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint).flatMap(res => {
-      res.status match {
-        case StatusCodes.OK =>
-          Unmarshal[HttpResponse](res)
-            .to[CiriumFlightStatusResponseSuccess].recover {
-            case error: Throwable =>
-              log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
-              metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
-              CiriumFlightStatusResponseFailure(error)
-          }
-        case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
-          Future.failed(new Exception(s"Unable to get valid response $res"))
+    def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint)
+      .flatMap(res => {
+        res.status match {
+          case StatusCodes.OK =>
+            Unmarshal[HttpResponse](res)
+              .to[CiriumFlightStatusResponseSuccess].recover {
+              case error: Throwable =>
+                log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
+                metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
+                CiriumFlightStatusResponseFailure(error)
+            }
+          case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
+            Future.failed(new Exception(s"Unable to get valid response $res"))
+        }
+      })
+      .recover {
+        case t =>
+          log.error(s"Failed to request item $endpoint")
+          CiriumFlightStatusResponseFailure(t)
       }
-    })
   }
 
   class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
@@ -121,51 +127,34 @@ object Cirium {
     def apply(endpoint: String): LatestItem = LatestItem(Option(endpoint))
   }
 
-  class CiriumLastItemActor extends Actor {
-    private val log = LoggerFactory.getLogger(getClass)
-
-    var lastItem: LatestItem = LatestItem(None)
-
-    def receive: Receive = {
-      case latest: LatestItem =>
-        log.info(s"Latest item is ${latest.endpoint.getOrElse("not set")}")
-        lastItem = latest
-        sender() ! "Ack"
-
-      case Ask =>
-        sender() ! lastItem
-    }
-  }
-
   case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
-    val latestItemActor: ActorRef = system.actorOf(Props(classOf[CiriumLastItemActor]), "latest-item-actor")
-
-    def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] = {
-      client.initialRequest().flatMap(cir => backwardsStrategy.backwardsFrom(cir.item)).map { startUrl =>
-        Source
-          .unfoldAsync((startUrl, List[String]())) { case (url, lastStatusUrls) =>
-            client.forwards(url, step).map {
-              case CiriumItemListResponse(items) if items.isEmpty =>
-                log.info(s"No records to fetch from $url")
-                Option((url, lastStatusUrls), (url, lastStatusUrls))
-              case CiriumItemListResponse(newStatusUrls) =>
-                log.info(s"${newStatusUrls.size} records to fetch from $url")
-                Option((newStatusUrls.last, newStatusUrls), (url, lastStatusUrls))
+    def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] =
+      client.initialRequest()
+        .flatMap(cir => backwardsStrategy.backwardsFrom(cir.item))
+        .map { startUrl =>
+          Source
+            .unfoldAsync((startUrl, List[String]())) { case (url, lastStatusUrls) =>
+              client.forwards(url, step).map {
+                case CiriumItemListResponse(items) if items.isEmpty =>
+                  log.info(s"No records to fetch from $url")
+                  Option((url, lastStatusUrls), (url, lastStatusUrls))
+                case CiriumItemListResponse(newStatusUrls) =>
+                  log.info(s"${newStatusUrls.size} records to fetch from $url")
+                  Option((newStatusUrls.last, newStatusUrls), (url, lastStatusUrls))
+              }
             }
-          }
-          .throttle(1, pollInterval)
-          .mapConcat { case (_, statusUrls) => statusUrls }
-          .mapAsync(10)(client.requestItem)
-          .collect {
-            case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
-              statuses.map(status =>
-                CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
-          }
-          .mapConcat(identity)
-      }
-    }
+            .throttle(1, pollInterval)
+            .mapConcat { case (_, statusUrls) => statusUrls }
+            .mapAsync(10)(client.requestItem)
+            .collect {
+              case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
+                statuses.map(status =>
+                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+            }
+            .mapConcat(identity)
+        }
   }
 
   def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
