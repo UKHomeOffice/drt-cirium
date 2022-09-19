@@ -6,6 +6,7 @@ lazy val logBackClassicVersion = "1.2.3"
 lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.10.0"
 lazy val censorinusVersion = "2.1.16"
+lazy val scalatestVersion = "3.2.13"
 
 lazy val root = (project in file(".")).
   settings(
@@ -36,7 +37,9 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
-      "org.specs2" %% "specs2-core" % specs2Version % Test
+      "org.specs2" %% "specs2-core" % specs2Version % Test,
+      "org.scalactic" %% "scalactic" % scalatestVersion,
+      "org.scalatest" %% "scalatest" % scalatestVersion % "test",
     )
   )
   .enablePlugins(DockerPlugin)

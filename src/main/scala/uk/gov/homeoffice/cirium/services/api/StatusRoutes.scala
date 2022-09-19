@@ -36,12 +36,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
       concat(
         pathEnd {
           get {
-            val eventualSummary = Retry.retry(
-              CiriumAppHealthSummaryConstructor(flightStatusActor, portActors),
-              Retry.fibonacciDelay,
-              3,
-              1 second)
-            complete(eventualSummary)
+            complete(CiriumAppHealthSummaryConstructor(flightStatusActor, portActors))
           }
         },
         path("is-healthy") {
