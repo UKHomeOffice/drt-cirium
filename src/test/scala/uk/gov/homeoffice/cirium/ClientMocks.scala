@@ -17,11 +17,11 @@ case class MockClientWithInitialResponseOnly(firstItemLink: String)
 
   override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-  override def makeRequest(endpoint: String): Future[HttpResponse] = ???
+  override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = ???
 
   override def sendReceive(uri: Uri): Future[HttpResponse] = ???
 
-  override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
+  override def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
 }
 
 case class MockClientWithFailure(firstItemLink: String)
@@ -33,9 +33,9 @@ case class MockClientWithFailure(firstItemLink: String)
 
   override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
 
-  override def makeRequest(endpoint: String): Future[HttpResponse] = ???
+  override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = ???
 
   override def sendReceive(uri: Uri): Future[HttpResponse] = ???
 
-  override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
+  override def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
 }

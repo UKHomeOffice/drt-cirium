@@ -24,11 +24,11 @@ trait CiriumClientLike {
 
   def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse]
 
-  def makeRequest(endpoint: String): Future[HttpResponse]
+  def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse]
 
   def sendReceive(uri: Uri): Future[HttpResponse]
 
-  def requestItem(endpoint: String): Future[CiriumFlightStatusResponse]
+  def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponse]
 
 }
 
@@ -42,10 +42,12 @@ object Cirium {
 
     import uk.gov.homeoffice.cirium.JsonSupport._
 
-    val maybeMaxRetries: Option[Int] = None
+    val initialRequestMaxRetries: Option[Int] = None
+    val itemListMaxRetries: Option[Int] = None
+    val flightStatusMaxRetries: Option[Int] = Option(15)
 
-    def initialRequest(): Future[CiriumInitialResponse] =
-      makeRequest(entryPoint).flatMap { res =>
+    override def initialRequest(): Future[CiriumInitialResponse] =
+      makeRequest(entryPoint, initialRequestMaxRetries).flatMap { res =>
         Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
           case e =>
             log.error(s"Error while parsing initialRequest", e)
@@ -53,23 +55,23 @@ object Cirium {
         }
       }
 
-    def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
-      requestAndUnmarshal(latestItemLocation + s"/previous/$step")
+    override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
+      fetchItemList(latestItemLocation + s"/previous/$step")
 
-    def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
-      requestAndUnmarshal(latestItemLocation + s"/next/$step")
+    override def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
+      fetchItemList(latestItemLocation + s"/next/$step")
 
-    private def requestAndUnmarshal(uri: String): Future[CiriumItemListResponse] =
-      makeRequest(uri)
+    private def fetchItemList(uri: String): Future[CiriumItemListResponse] =
+      makeRequest(uri, itemListMaxRetries)
         .flatMap(res => Unmarshal[HttpResponse](res).to[CiriumItemListResponse])
         .recover {
           case error: Throwable =>
             log.error(s"Failed to get a response from cirium end point: ${error.getMessage}")
-            metricsCollector.errorCounterMetric("requestAndUnmarshal-CiriumItemListResponse")
+            metricsCollector.errorCounterMetric("fetchItemList-CiriumItemListResponse")
             CiriumItemListResponse.empty
         }
 
-    def makeRequest(endpoint: String): Future[HttpResponse] =
+    override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] =
       Retry.retry(
         sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey"))
           .flatMap { response =>
@@ -82,28 +84,29 @@ object Cirium {
         Retry.fibonacci(180).map(_.second), maybeMaxRetries, 5.seconds
       )
 
-    def sendReceive(uri: Uri): Future[HttpResponse]
+    //    def sendReceive(uri: Uri): Future[HttpResponse]
 
-    def requestItem(endpoint: String): Future[CiriumFlightStatusResponse] = makeRequest(endpoint)
-      .flatMap { res =>
-        res.status match {
-          case StatusCodes.OK =>
-            Unmarshal[HttpResponse](res)
-              .to[CiriumFlightStatusResponseSuccess].recover {
-              case error: Throwable =>
-                log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
-                metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
-                CiriumFlightStatusResponseFailure(error)
-            }
-          case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
-            Future.failed(new Exception(s"Unable to get valid response $res"))
+    def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponse] =
+      makeRequest(endpoint, flightStatusMaxRetries)
+        .flatMap { res =>
+          res.status match {
+            case StatusCodes.OK =>
+              Unmarshal[HttpResponse](res)
+                .to[CiriumFlightStatusResponseSuccess].recover {
+                case error: Throwable =>
+                  log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
+                  metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
+                  CiriumFlightStatusResponseFailure(error)
+              }
+            case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
+              Future.failed(new Exception(s"Unable to get valid response $res"))
+          }
         }
-      }
-      .recover {
-        case t =>
-          log.error(s"Failed to request item $endpoint")
-          CiriumFlightStatusResponseFailure(t)
-      }
+        .recover {
+          case t =>
+            log.error(s"Failed to request item $endpoint")
+            CiriumFlightStatusResponseFailure(t)
+        }
   }
 
   class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
@@ -138,7 +141,7 @@ object Cirium {
             }
             .throttle(1, pollInterval)
             .mapConcat { case (_, statusUrls) => statusUrls }
-            .mapAsync(10)(client.requestItem)
+            .mapAsync(10)(client.fetchFlightStatus)
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
                 statuses.map(status =>
