@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse }
+import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledResponse}
 
 import scala.concurrent.Future
 
@@ -22,7 +22,10 @@ trait FlightScheduledRoutes extends CiriumBaseRoutes {
       get {
         entity(as[CiriumScheduledFlightRequest]) { csfRequest =>
           complete(
-            client.makeRequest(s"$scheduleApiEndpoint/${csfRequest.flightCode}/${csfRequest.flightNumber}/departing/${csfRequest.year}/${csfRequest.month}/${csfRequest.day}")
+            client
+              .makeRequest(
+                endpoint = s"$scheduleApiEndpoint/${csfRequest.flightCode}/${csfRequest.flightNumber}/departing/${csfRequest.year}/${csfRequest.month}/${csfRequest.day}",
+                maybeMaxRetries = Option(0))
               .flatMap(res => {
                 val futureStatusResponse: Future[CiriumScheduledResponse] = Unmarshal[HttpResponse](res).to[CiriumScheduledResponse]
                 futureStatusResponse.map { statusResponse =>

@@ -1,16 +1,14 @@
 package uk.gov.homeoffice.cirium
 
-import akka.http.scaladsl.model.{HttpResponse, Uri}
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.actors.CiriumFeedHealthStatus
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 import uk.gov.homeoffice.cirium.services.health.{AppHealthCheck, CiriumAppHealthSummary}
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
 class CiriumHealthSpec extends Specification {
 
@@ -170,36 +168,4 @@ class CiriumHealthSpec extends Specification {
   def urlForMessageAtDateTime(year: Int, month: Int, day: Int, hour: Int, minute: Int): String = {
     f"https://something.something.endpoint/rest/v2/json/$year/$month%02d/$day%02d/$hour%02d/$minute%02d/00/00/hash"
   }
-
-  case class MockClientWithInitialResponseOnly(firstItemLink: String) extends CiriumClientLike {
-
-    override def initialRequest(): Future[CiriumInitialResponse] = Future(
-      CiriumInitialResponse(CiriumRequestMetaData("", None, None, ""), firstItemLink))
-
-    override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
-
-    override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
-
-    override def makeRequest(endpoint: String): Future[HttpResponse] = ???
-
-    override def sendReceive(uri: Uri): Future[HttpResponse] = ???
-
-    override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
-  }
-
-  case class MockClientWithFailure(firstItemLink: String) extends CiriumClientLike {
-
-    override def initialRequest(): Future[CiriumInitialResponse] = Future(throw new Exception("Unable to connect"))
-
-    override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
-
-    override def forwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] = ???
-
-    override def makeRequest(endpoint: String): Future[HttpResponse] = ???
-
-    override def sendReceive(uri: Uri): Future[HttpResponse] = ???
-
-    override def requestItem(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
-  }
-
 }

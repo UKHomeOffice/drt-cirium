@@ -21,8 +21,8 @@ case class CiriumAppHealthSummary(feedHealth: CiriumFeedHealthStatus,
 object CiriumAppHealthSummaryConstructor {
   implicit lazy val timeout: Timeout = 3.seconds
 
-  def apply(flightStatusActor: ActorRef,
-            portActors: Map[String, ActorRef])(implicit executionContext: ExecutionContext): Future[CiriumAppHealthSummary] = {
+  def apply(flightStatusActor: ActorRef, portActors: Map[String, ActorRef])
+           (implicit executionContext: ExecutionContext): Future[CiriumAppHealthSummary] = {
     val eventualHealthStatus: Future[CiriumFeedHealthStatus] = (flightStatusActor ? GetHealth)
       .mapTo[CiriumFeedHealthStatus]
     val eventualPortSummaries: Future[Map[String, PortFeedHealthSummary]] = Future.sequence(portActors.map {

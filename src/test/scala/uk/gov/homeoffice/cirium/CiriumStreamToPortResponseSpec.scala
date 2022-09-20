@@ -57,6 +57,8 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   class MockClientWith500Response(startUri: String, metricsCollector: MetricsCollector)
                                  (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, metricsCollector) {
+    override val flightStatusMaxRetries: Option[Int] = Option(0)
+
     def sendReceive(endpoint: Uri): Future[HttpResponse] =
       Future(HttpResponse(500, Nil, HttpEntity(ContentTypes.`application/json`, "Boom")))
   }
@@ -244,7 +246,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a 500 response, I should get a failed response" >> {
     val client = new MockClientWith500Response("", MockMetricsCollector)
-    Await.result(client.requestItem(""), 1.second).getClass === classOf[CiriumFlightStatusResponseFailure]
+    Await.result(client.fetchFlightStatus(""), 1.second).getClass === classOf[CiriumFlightStatusResponseFailure]
   }
 
   val initialResponse: String =
