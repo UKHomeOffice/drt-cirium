@@ -1,19 +1,21 @@
-lazy val akkaHttpVersion = "10.2.6"
-lazy val akkaVersion = "2.6.8"
-lazy val specs2Version = "4.6.0"
-lazy val jodaTimeVersion = "2.9.4"
-lazy val logBackClassicVersion = "1.2.3"
+lazy val scala = "2.13.10"
+lazy val akkaHttpVersion = "10.4.0"
+lazy val akkaVersion = "2.7.0"
+lazy val specs2Version = "4.19.2"
+lazy val jodaTimeVersion = "2.12.2"
+lazy val logBackClassicVersion = "1.4.5"
 lazy val logbackContribVersion = "0.1.5"
-lazy val jacksonDatabindVersion = "2.10.0"
+lazy val jacksonDatabindVersion = "2.14.2"
 lazy val censorinusVersion = "2.1.16"
-lazy val scalatestVersion = "3.2.13"
+lazy val scalatestVersion = "3.2.15"
+lazy val janinoVersion = "3.1.9"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "uk.gov.homeoffice",
     )),
-    crossScalaVersions := Seq("2.13.8", "2.12.15"),
+    scalaVersion := scala,
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
 
@@ -32,7 +34,7 @@ lazy val root = (project in file(".")).
       "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
       "ch.qos.logback.contrib" % "logback-jackson" % logbackContribVersion,
       "com.fasterxml.jackson.core" % "jackson-databind" % jacksonDatabindVersion,
-      "org.codehaus.janino" % "janino" % "3.0.7",
+      "org.codehaus.janino" % "janino" % janinoVersion,
 
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
