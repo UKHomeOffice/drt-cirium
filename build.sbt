@@ -22,6 +22,8 @@ lazy val root = (project in file(".")).
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
 
+    dockerBaseImage := "openjdk:11-jre-slim-buster",
+
     libraryDependencies ++= Seq(
       "com.github.gphat" %% "censorinus" % censorinusVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
