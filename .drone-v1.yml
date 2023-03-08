@@ -8,6 +8,20 @@ platform:
   arch: amd64
 
 steps:
+- name: build
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/scala-sbt:latest
+  commands:
+    - /root/entrypoint.sh
+    - sbt test +publish docker:stage
+  environment:
+    ARTIFACTORY_PASSWORD:
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: scala-test-token
+  when:
+    event:
+      - push
+
 - name: analysis
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
@@ -25,19 +39,20 @@ steps:
     event:
       - push
 
-- name: build
+- name: sonar-scanner
   pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/scala-sbt:latest
+  image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
   commands:
-    - /root/entrypoint.sh
-    - sbt test +publish docker:stage
+    - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER}
   environment:
-    ARTIFACTORY_PASSWORD:
-      from_secret: ARTIFACTORY_PASSWORD
-    ARTIFACTORY_USERNAME: scala-test-token
+    DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
   when:
+    branch:
+      - ${DRONE_BRANCH}
     event:
-    - push
+      - push
+  depends_on:
+    - analysis
 
 - name: publish
   image: plugins/ecr
