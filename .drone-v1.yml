@@ -8,6 +8,23 @@ platform:
   arch: amd64
 
 steps:
+- name: analysis
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+  commands:
+    - /root/entrypoint.sh
+    - sbt -ivy ./.ivy2 dependencyCheck
+    - sbt scalastyle | true
+    - sbt scapegoat | true
+  environment:
+    ARTIFACTORY_PASSWORD:
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: scala-test-token
+    ENV_LOG_LEVEL: ERROR
+  when:
+    event:
+      - push
+
 - name: build
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/scala-sbt:latest

@@ -10,6 +10,8 @@ lazy val censorinusVersion = "2.1.16"
 lazy val scalatestVersion = "3.2.15"
 lazy val janinoVersion = "3.1.9"
 
+ThisBuild / scapegoatVersion := "2.1.1"
+
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
