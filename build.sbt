@@ -8,7 +8,7 @@ lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.14.2"
 lazy val censorinusVersion = "2.1.16"
 lazy val scalatestVersion = "3.2.15"
-lazy val janinoVersion = "3.1.9"
+lazy val janinoVersion = "3.1.10"
 
 ThisBuild / scapegoatVersion := "2.1.1"
 
