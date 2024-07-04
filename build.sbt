@@ -1,7 +1,7 @@
 lazy val scala = "2.13.10"
 lazy val akkaHttpVersion = "10.4.0"
 lazy val akkaVersion = "2.7.0"
-lazy val specs2Version = "4.19.2"
+lazy val specs2Version = "4.20.8"
 lazy val jodaTimeVersion = "2.12.2"
 lazy val logBackClassicVersion = "1.4.5"
 lazy val logbackContribVersion = "0.1.5"
