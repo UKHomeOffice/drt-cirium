@@ -1,4 +1,4 @@
-lazy val scala = "2.13.10"
+lazy val scala = "2.13.15"
 lazy val akkaHttpVersion = "10.4.0"
 lazy val akkaVersion = "2.7.0"
 lazy val specs2Version = "4.19.2"
