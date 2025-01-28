@@ -10,7 +10,7 @@ platform:
 steps:
   - name: build
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-alpha-16
     commands:
       - /root/entrypoint.sh
       - sbt test +publish docker:stage
@@ -44,7 +44,7 @@ steps:
 
   - name: analysis
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-alpha-16
     commands:
       - /root/entrypoint.sh
       - sbt -ivy ./.ivy2 dependencyCheck
