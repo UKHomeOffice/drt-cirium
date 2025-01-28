@@ -10,7 +10,7 @@ lazy val censorinusVersion = "2.1.16"
 lazy val scalatestVersion = "3.2.19"
 lazy val janinoVersion = "3.1.11"
 
-ThisBuild / scapegoatVersion := "1.2.8"
+//ThisBuild / scapegoatVersion := "1.2.8"
 
 lazy val root = (project in file(".")).
   settings(
@@ -21,8 +21,11 @@ lazy val root = (project in file(".")).
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
 
-    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
-    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+    resolvers ++= Seq(
+      "Akka library repository".at("https://repo.akka.io/maven"),
+      "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+      "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+    ),
 
     dockerBaseImage := "openjdk:11-jre-slim-buster",
 
