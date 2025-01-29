@@ -1,6 +1,6 @@
 lazy val scala = "2.13.15"
-lazy val akkaHttpVersion = "10.7.0"
-lazy val akkaVersion = "2.10.0"
+lazy val akkaVersion = "2.9.5" // last version with license key requirement
+lazy val akkaHttpVersion = "10.6.3" // last version dependent on akka 2.9.5
 lazy val specs2Version = "4.20.9"
 lazy val jodaTimeVersion = "2.12.7"
 lazy val logBackClassicVersion = "1.4.14"
@@ -9,8 +9,6 @@ lazy val jacksonDatabindVersion = "2.16.1"
 lazy val censorinusVersion = "2.1.16"
 lazy val scalatestVersion = "3.2.19"
 lazy val janinoVersion = "3.1.11"
-
-//ThisBuild / scapegoatVersion := "1.2.8"
 
 lazy val root = (project in file(".")).
   settings(
