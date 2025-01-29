@@ -21,8 +21,7 @@ lazy val root = (project in file(".")).
 
     resolvers ++= Seq(
       "Akka library repository".at("https://repo.akka.io/maven"),
-      "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
-      "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+      "Artifactory Realm libs release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     ),
 
     dockerBaseImage := "openjdk:11-jre-slim-buster",
