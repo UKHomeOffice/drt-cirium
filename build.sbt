@@ -1,16 +1,14 @@
-lazy val scala = "2.13.10"
-lazy val akkaHttpVersion = "10.4.0"
-lazy val akkaVersion = "2.7.0"
-lazy val specs2Version = "4.19.2"
-lazy val jodaTimeVersion = "2.12.2"
-lazy val logBackClassicVersion = "1.4.5"
+lazy val scala = "2.13.15"
+lazy val akkaVersion = "2.9.5" // last version with license key requirement
+lazy val akkaHttpVersion = "10.6.3" // last version dependent on akka 2.9.5
+lazy val specs2Version = "4.20.9"
+lazy val jodaTimeVersion = "2.12.7"
+lazy val logBackClassicVersion = "1.4.14"
 lazy val logbackContribVersion = "0.1.5"
-lazy val jacksonDatabindVersion = "2.14.2"
+lazy val jacksonDatabindVersion = "2.16.1"
 lazy val censorinusVersion = "2.1.16"
-lazy val scalatestVersion = "3.2.15"
-lazy val janinoVersion = "3.1.9"
-
-ThisBuild / scapegoatVersion := "2.1.1"
+lazy val scalatestVersion = "3.2.19"
+lazy val janinoVersion = "3.1.11"
 
 lazy val root = (project in file(".")).
   settings(
@@ -21,8 +19,10 @@ lazy val root = (project in file(".")).
     version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
 
-    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
-    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+    resolvers ++= Seq(
+      "Akka library repository".at("https://repo.akka.io/maven"),
+      "Artifactory Realm libs release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+    ),
 
     dockerBaseImage := "openjdk:11-jre-slim-buster",
 
@@ -32,6 +32,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "com.typesafe.akka" %% "akka-pki" % akkaVersion,
       "ch.qos.logback" % "logback-classic" % logBackClassicVersion,
       "joda-time" % "joda-time" % jodaTimeVersion,
 
