@@ -1,4 +1,4 @@
-lazy val scala = "2.13.15"
+lazy val scala = "2.13.16"
 lazy val akkaVersion = "2.9.5" // last version with license key requirement
 lazy val akkaHttpVersion = "10.6.3" // last version dependent on akka 2.9.5
 lazy val specs2Version = "4.20.9"
