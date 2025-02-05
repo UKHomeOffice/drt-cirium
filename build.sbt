@@ -1,6 +1,6 @@
 lazy val scala = "2.13.15"
-lazy val akkaVersion = "2.9.5" // last version with license key requirement
-lazy val akkaHttpVersion = "10.6.3" // last version dependent on akka 2.9.5
+lazy val pekkoVersion = "1.1.1"
+lazy val pekkoHttpVersion = "1.1.0"
 lazy val specs2Version = "4.20.9"
 lazy val jodaTimeVersion = "2.12.7"
 lazy val logBackClassicVersion = "1.4.14"
@@ -28,11 +28,11 @@ lazy val root = (project in file(".")).
 
     libraryDependencies ++= Seq(
       "com.github.gphat" %% "censorinus" % censorinusVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-      "com.typesafe.akka" %% "akka-pki" % akkaVersion,
+      "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion,
+      "org.apache.pekko" %% "pekko-http-spray-json" % pekkoHttpVersion,
+      "org.apache.pekko" %% "pekko-stream" % pekkoVersion,
+      "org.apache.pekko" %% "pekko-slf4j" % pekkoVersion,
+      "org.apache.pekko" %% "pekko-pki" % pekkoVersion,
       "ch.qos.logback" % "logback-classic" % logBackClassicVersion,
       "joda-time" % "joda-time" % jodaTimeVersion,
 
@@ -41,9 +41,9 @@ lazy val root = (project in file(".")).
       "com.fasterxml.jackson.core" % "jackson-databind" % jacksonDatabindVersion,
       "org.codehaus.janino" % "janino" % janinoVersion,
 
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
-      "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+      "org.apache.pekko" %% "pekko-http-testkit" % pekkoHttpVersion % Test,
+      "org.apache.pekko" %% "pekko-testkit" % pekkoVersion % Test,
+      "org.apache.pekko" %% "pekko-stream-testkit" % pekkoVersion % Test,
       "org.specs2" %% "specs2-core" % specs2Version % Test,
       "org.scalactic" %% "scalactic" % scalatestVersion,
       "org.scalatest" %% "scalatest" % scalatestVersion % "test",

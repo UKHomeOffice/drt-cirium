@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.{ActorSystem, Scheduler}
-import akka.testkit.{TestKit, TestProbe}
+import org.apache.pekko.actor.{ActorSystem, Scheduler}
+import org.apache.pekko.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll

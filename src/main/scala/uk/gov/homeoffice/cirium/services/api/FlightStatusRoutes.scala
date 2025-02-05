@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.cirium.services.api
 
-import akka.actor.ActorRef
-import akka.http.scaladsl.server.Directives.{ concat, path, pathEnd, pathPrefix, rejectEmptyResponse, _ }
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.MethodDirectives.get
-import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.pattern.{ AskableActorRef, ask }
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.http.scaladsl.server.Directives.{ concat, path, pathEnd, pathPrefix, rejectEmptyResponse, _ }
+import org.apache.pekko.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.server.directives.MethodDirectives.get
+import org.apache.pekko.http.scaladsl.server.directives.RouteDirectives.complete
+import org.apache.pekko.pattern.{ AskableActorRef, ask }
 import uk.gov.homeoffice.cirium.{ AppConfig, JsonSupport }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses }
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }

@@ -1,8 +1,8 @@
 package uk.gov.homeoffice.cirium.services.feed
-import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes, Uri}
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.http.scaladsl.model.{HttpResponse, StatusCodes, Uri}
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.TestProbe
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

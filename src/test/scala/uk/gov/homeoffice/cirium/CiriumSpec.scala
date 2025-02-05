@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.model._
-import akka.pattern.pipe
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
-import akka.testkit.{TestKit, TestProbe}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.pattern.pipe
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach

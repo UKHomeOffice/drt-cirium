@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.Scheduler
-import akka.http.scaladsl.marshalling.Marshal
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.testkit.Specs2RouteTest
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.Materializer
+import org.apache.pekko.actor.Scheduler
+import org.apache.pekko.http.scaladsl.marshalling.Marshal
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.testkit.Specs2RouteTest
+import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
+import org.apache.pekko.stream.Materializer
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.services.api.FlightScheduledRoutes
 import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse}
