@@ -16,7 +16,7 @@ lazy val root = (project in file(".")).
       organization := "uk.gov.homeoffice",
     )),
     scalaVersion := scala,
-    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "DEV")),
+    version := sys.env.getOrElse("DRONE_BUILD_NUMBER", "v" + sys.env.getOrElse("BUILD_ID", "DEV")),
     name := "drt-cirium",
 
     resolvers ++= Seq(
