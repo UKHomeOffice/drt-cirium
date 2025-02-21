@@ -3,7 +3,7 @@ ThisBuild / libraryDependencySchemes ++= Seq(
 )
 
 val pluginSbtScoverageVersion = sys.props.getOrElse(
-  "plugin.sbtscoverage.version", "2.3.0"
+  "plugin.sbtscoverage.version", "2.3.1"
 )
 
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % pluginSbtScoverageVersion)
