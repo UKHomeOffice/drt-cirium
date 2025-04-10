@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium.actors
 
-import akka.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor._
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus

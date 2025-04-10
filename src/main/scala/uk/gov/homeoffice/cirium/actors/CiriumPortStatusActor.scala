@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium.actors
 
-import akka.actor.{Actor, Props, Timers}
+import org.apache.pekko.actor.{Actor, Props, Timers}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus

@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium.services.feed
 
-import akka.actor.ActorSystem
-import akka.pattern.after
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.pattern.after
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration

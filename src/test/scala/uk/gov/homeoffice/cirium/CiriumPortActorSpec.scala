@@ -1,9 +1,9 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.ActorSystem
-import akka.pattern.ask
-import akka.testkit.TestKit
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.testkit.TestKit
+import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike

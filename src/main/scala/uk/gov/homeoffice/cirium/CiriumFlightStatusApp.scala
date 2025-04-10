@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.cirium
 
-import akka.actor.{ActorRef, ActorSystem, Scheduler}
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Scheduler}
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Route
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Sink
 import github.gphat.censorinus.StatsDClient
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory

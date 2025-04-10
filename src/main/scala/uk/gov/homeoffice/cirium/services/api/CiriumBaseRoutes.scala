@@ -1,8 +1,8 @@
 package uk.gov.homeoffice.cirium.services.api
 
-import akka.actor.{ ActorSystem, Scheduler }
-import akka.stream.Materializer
-import akka.util.Timeout
+import org.apache.pekko.actor.{ ActorSystem, Scheduler }
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.ExecutionContext

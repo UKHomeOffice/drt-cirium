@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium
 
-import akka.http.scaladsl.model.{HttpResponse, Uri}
+import org.apache.pekko.http.scaladsl.model.{HttpResponse, Uri}
 import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatusResponseSuccess, CiriumInitialResponse, CiriumItemListResponse, CiriumRequestMetaData}
 import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 
