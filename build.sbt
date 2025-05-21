@@ -1,6 +1,6 @@
 lazy val scala = "2.13.16"
 lazy val pekkoVersion = "1.1.3"
-lazy val pekkoHttpVersion = "1.1.0"
+lazy val pekkoHttpVersion = "1.2.0"
 lazy val specs2Version = "4.20.9"
 lazy val jodaTimeVersion = "2.12.7"
 lazy val logBackClassicVersion = "1.4.14"
