@@ -47,7 +47,6 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
       - sbt -ivy ./.ivy2 -mem 4096 -J-XX:+UseG1GC coverage test coverageReport
       - sbt scalastyle | true
       - sbt scapegoat | true
@@ -62,6 +61,29 @@ steps:
         - push
     depends_on:
       - build
+
+  - name: Dependency check
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - sbt -Dlog4j2.level=info dependencyCheck
+    environment:
+      NVD_API_KEY:
+        from_secret: NVD_API_KEY_SECRET
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+#      branch:
+#        - master
+    depends_on:
+      - analysis
 
   - name: sonar-scanner
     pull: if-not-exists
