@@ -80,8 +80,8 @@ steps:
     when:
       event:
         - push
-#      branch:
-#        - master
+      branch:
+        - master
     depends_on:
       - analysis
 
@@ -98,5 +98,5 @@ steps:
       event:
         - push
     depends_on:
-      - analysis
+      - Dependency check
 ...
