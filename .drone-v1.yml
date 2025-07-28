@@ -56,7 +56,7 @@ steps:
       ARTIFACTORY_USERNAME: drt-artifactory-robot
       ENV_LOG_LEVEL: ERROR
     when:
-#      branch: master
+      branch: master
       event:
         - push
     depends_on:
@@ -94,7 +94,7 @@ steps:
       DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
       branch:
-        - ${DRONE_BRANCH}
+        - master
       event:
         - push
     depends_on:
