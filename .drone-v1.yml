@@ -47,12 +47,10 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
       - sbt -ivy ./.ivy2 -mem 4096 -J-XX:+UseG1GC coverage test coverageReport
       - sbt scalastyle | true
       - sbt scapegoat | true
     environment:
-      NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt-artifactory-robot
@@ -64,6 +62,29 @@ steps:
     depends_on:
       - build
 
+  - name: Dependency check
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - sbt -Dlog4j2.level=info dependencyCheck
+    environment:
+      NVD_API_KEY:
+        from_secret: NVD_API_KEY_SECRET
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - analysis
+
   - name: sonar-scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
@@ -73,15 +94,9 @@ steps:
       DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
       branch:
-        - ${DRONE_BRANCH}
+        - master
       event:
         - push
     depends_on:
-      - analysis
-
-services:
-  - name: nvdmirror
-    image: sspringett/nvdmirror
-    ports:
-      - 8008
+      - Dependency check
 ...
