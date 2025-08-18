@@ -9,6 +9,6 @@ val pluginSbtScoverageVersion = sys.props.getOrElse(
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % pluginSbtScoverageVersion)
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.16")
 addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "1.0.0")
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.10")
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.13")
 addSbtPlugin("net.nmoncho" % "sbt-dependency-check" % "1.7.1")
 addDependencyTreePlugin
