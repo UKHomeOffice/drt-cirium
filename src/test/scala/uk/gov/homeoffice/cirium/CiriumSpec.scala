@@ -74,9 +74,9 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
     result === expected
   }
 
-  "I should be able to parse a flight status response" >> {
+  "I should be able to parse a passenger flight status response" >> {
 
-    val client = new MockClient(flightStatusResponse, MockMetricsCollector)
+    val client = new MockClient(flightStatusResponse("J"), MockMetricsCollector)
     val result = Await.result(client.fetchFlightStatus("endpoint"), 1.second)
 
     val expected = CiriumFlightStatusResponseSuccess(
@@ -97,6 +97,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
           CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
           "A",
+          CiriumStatusSchedule("J"),
           CiriumOperationalTimes(
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
@@ -174,8 +175,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |}
     """.stripMargin
 
-  def flightStatusResponse: String =
-    """
+  def flightStatusResponse(flightType: String): String =
+    s"""
       |{
       |    "request": {
       |        "endpoint": "item",
@@ -204,7 +205,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |            },
       |            "status": "A",
       |            "schedule": {
-      |                "flightType": "J",
+      |                "flightType": "$flightType",
       |                "serviceClasses": "XXXX",
       |                "restrictions": "",
       |                "uplines": [],

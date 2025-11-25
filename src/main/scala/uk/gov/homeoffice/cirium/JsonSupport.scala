@@ -19,6 +19,7 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumOperationalTimesJsonFormat: RootJsonFormat[CiriumOperationalTimes] = jsonFormat16(CiriumOperationalTimes)
   implicit val ciriumCodeshareJsonFormat: RootJsonFormat[CiriumCodeshare] = jsonFormat3(CiriumCodeshare)
   implicit val ciriumAirportResourcesJsonFormat: RootJsonFormat[CiriumAirportResources] = jsonFormat5(CiriumAirportResources)
+  implicit val ciriumStatusScheduleJsonFormat: RootJsonFormat[CiriumStatusSchedule] = jsonFormat1(CiriumStatusSchedule)
   implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat(
     CiriumFlightStatus.apply,
     "flightId",
@@ -31,6 +32,7 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
     "departureDate",
     "arrivalDate",
     "status",
+    "schedule",
     "operationalTimes",
     "delays",
     "flightDurations",

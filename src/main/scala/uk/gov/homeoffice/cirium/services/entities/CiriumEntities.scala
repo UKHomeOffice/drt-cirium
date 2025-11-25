@@ -95,6 +95,8 @@ case class CiriumOperationalTimes(publishedDeparture: Option[CiriumDate],
                                   estimatedRunwayArrival: Option[CiriumDate],
                                   actualRunwayArrival: Option[CiriumDate])
 
+case class CiriumStatusSchedule(flightType: String)
+
 case class CiriumFlightStatus(flightId: Int,
                               carrierFsCode: String,
                               operatingCarrierFsCode: String,
@@ -105,6 +107,7 @@ case class CiriumFlightStatus(flightId: Int,
                               departureDate: CiriumDate,
                               arrivalDate: CiriumDate,
                               status: String,
+                              schedule: CiriumStatusSchedule,
                               operationalTimes: CiriumOperationalTimes,
                               delays: Option[CiriumDelays],
                               flightDurations: Option[CiriumFlightDurations],

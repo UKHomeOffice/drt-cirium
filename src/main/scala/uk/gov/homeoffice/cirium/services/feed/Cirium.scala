@@ -35,6 +35,8 @@ trait CiriumClientLike {
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
+  private val ciriumFreightFlightTypes = Set("F", "V", "M", "A", "H")
+
   abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)
                             (implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {
 
@@ -46,7 +48,7 @@ object Cirium {
     val itemListMaxRetries: Option[Int] = None
     val flightStatusMaxRetries: Option[Int] = Option(15)
 
-    override def initialRequest(): Future[CiriumInitialResponse] =
+    override def initialRequest(): Future[CiriumInitialResponse] = {
       makeRequest(entryPoint, initialRequestMaxRetries).flatMap { res =>
         Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
           case e =>
@@ -54,6 +56,7 @@ object Cirium {
             Future.failed(new Exception(s"Error while making InitialRequest", e))
         }
       }
+    }
 
     override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
       fetchItemList(latestItemLocation + s"/previous/$step")
@@ -71,20 +74,21 @@ object Cirium {
             CiriumItemListResponse.empty
         }
 
-    override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] =
+    override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = {
+      val uri = Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")
       Retry.retry(
-        sendReceive(Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey"))
+        sendReceive(uri)
           .flatMap { response =>
             response.status match {
               case StatusCodes.OK => Future.successful(response)
-              case status => log.warn(s"Status of http response is not 200 Ok $status")
+              case status =>
+                log.warn(s"Status of http response is not 200 Ok $status")
                 Future.failed(new Exception(s"$status status while cirium request"))
             }
           },
         Retry.fibonacci(180).map(_.second), maybeMaxRetries, 5.seconds
       )
-
-    //    def sendReceive(uri: Uri): Future[HttpResponse]
+    }
 
     def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponse] =
       makeRequest(endpoint, flightStatusMaxRetries)
@@ -113,13 +117,13 @@ object Cirium {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
-  case object Ask
+//  case object Ask
 
-  case class LatestItem(endpoint: Option[String])
+//  case class LatestItem(endpoint: Option[String])
 
-  case object LatestItem {
-    def apply(endpoint: String): LatestItem = LatestItem(Option(endpoint))
-  }
+//  case object LatestItem {
+//    def apply(endpoint: String): LatestItem = LatestItem(Option(endpoint))
+//  }
 
   case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
@@ -144,8 +148,9 @@ object Cirium {
             .mapAsync(10)(client.fetchFlightStatus)
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
-                statuses.map(status =>
-                  CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+                statuses
+                  .filterNot(s => ciriumFreightFlightTypes.contains(s.schedule.flightType))
+                  .map(status => CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
             }
             .mapConcat(identity)
         }
