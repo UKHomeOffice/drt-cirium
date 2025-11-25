@@ -180,7 +180,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     success
   }
 
-  "Given a json response wiht a freight flight, we should not see that flight in the marshalled response" >> {
+  "Given a json response with a freight flight, we should not see that flight sent to the actor" >> {
     val client = new MockClient("https://latest", "F")
     val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
     val probe = TestProbe()

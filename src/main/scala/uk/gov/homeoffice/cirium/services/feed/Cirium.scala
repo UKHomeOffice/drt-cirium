@@ -117,14 +117,6 @@ object Cirium {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
-//  case object Ask
-
-//  case class LatestItem(endpoint: Option[String])
-
-//  case object LatestItem {
-//    def apply(endpoint: String): LatestItem = LatestItem(Option(endpoint))
-//  }
-
   case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
