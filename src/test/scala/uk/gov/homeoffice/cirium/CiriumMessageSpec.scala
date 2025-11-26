@@ -19,7 +19,7 @@ class CiriumMessageSpec extends Specification {
     CiriumDate("2019-07-15T09:10:00.000Z", None),
     CiriumDate("2019-07-15T11:05:00.000Z", None),
     "",
-    CiriumStatusSchedule("J"),
+    CiriumStatusSchedule.passengerFlight,
     CiriumOperationalTimes(
       None,
       None,

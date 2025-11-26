@@ -97,7 +97,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
           CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
           "A",
-          CiriumStatusSchedule("J"),
+          CiriumStatusSchedule.passengerFlight,
           CiriumOperationalTimes(
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),

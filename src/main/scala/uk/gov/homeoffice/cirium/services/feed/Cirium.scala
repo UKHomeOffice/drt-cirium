@@ -11,6 +11,7 @@ import org.apache.pekko.util.Timeout
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.MetricsCollector
+import uk.gov.homeoffice.cirium.services.entities.CiriumStatusSchedule.ciriumFreightFlightTypes
 import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.duration._
@@ -34,8 +35,6 @@ trait CiriumClientLike {
 
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
-
-  private val ciriumFreightFlightTypes = Set("F", "V", "M", "A", "H")
 
   abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)
                             (implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {

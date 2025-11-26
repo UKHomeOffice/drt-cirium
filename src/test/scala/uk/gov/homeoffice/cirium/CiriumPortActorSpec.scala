@@ -57,7 +57,7 @@ object MockFlightStatus {
     CiriumDate(scheduledDate, None),
     CiriumDate(scheduledDate, None),
     "A",
-    CiriumStatusSchedule("J"),
+    CiriumStatusSchedule.passengerFlight,
     CiriumOperationalTimes(
       Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
       Some(CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000"))),
