@@ -17,6 +17,7 @@ object Generator {
     departureDate = CiriumDate("2019-07-15T09:10:00.000Z", None),
     arrivalDate = CiriumDate(sch, None),
     status = "",
+    schedule = CiriumStatusSchedule.passengerFlight,
     operationalTimes = CiriumOperationalTimes(
       publishedDeparture = None,
       scheduledGateDeparture = None,

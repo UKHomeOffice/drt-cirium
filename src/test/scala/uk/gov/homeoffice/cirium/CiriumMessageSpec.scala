@@ -2,9 +2,9 @@ package uk.gov.homeoffice.cirium
 
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.cirium.services.entities.{ CiriumDate, CiriumFlightStatus, CiriumMessageFormat, CiriumOperationalTimes, CiriumTrackableStatus }
+import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightStatus, CiriumMessageFormat, CiriumOperationalTimes, CiriumStatusSchedule, CiriumTrackableStatus}
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class CiriumMessageSpec extends Specification {
 
@@ -19,6 +19,7 @@ class CiriumMessageSpec extends Specification {
     CiriumDate("2019-07-15T09:10:00.000Z", None),
     CiriumDate("2019-07-15T11:05:00.000Z", None),
     "",
+    CiriumStatusSchedule.passengerFlight,
     CiriumOperationalTimes(
       None,
       None,

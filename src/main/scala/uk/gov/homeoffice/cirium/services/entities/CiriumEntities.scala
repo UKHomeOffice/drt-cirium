@@ -95,6 +95,15 @@ case class CiriumOperationalTimes(publishedDeparture: Option[CiriumDate],
                                   estimatedRunwayArrival: Option[CiriumDate],
                                   actualRunwayArrival: Option[CiriumDate])
 
+case class CiriumStatusSchedule(flightType: String)
+
+object CiriumStatusSchedule {
+  val ciriumFreightFlightTypes = Set("F", "V", "M", "A", "H")
+
+  def passengerFlight: CiriumStatusSchedule = CiriumStatusSchedule("J")
+  def freightFlight: CiriumStatusSchedule = CiriumStatusSchedule("F")
+}
+
 case class CiriumFlightStatus(flightId: Int,
                               carrierFsCode: String,
                               operatingCarrierFsCode: String,
@@ -105,6 +114,7 @@ case class CiriumFlightStatus(flightId: Int,
                               departureDate: CiriumDate,
                               arrivalDate: CiriumDate,
                               status: String,
+                              schedule: CiriumStatusSchedule,
                               operationalTimes: CiriumOperationalTimes,
                               delays: Option[CiriumDelays],
                               flightDurations: Option[CiriumFlightDurations],
