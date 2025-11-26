@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.cirium
 
 import com.typesafe.config.ConfigFactory
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
 import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Sink
@@ -181,18 +181,19 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   "Given a json response with a freight flight, we should not see that flight sent to the actor" >> {
-    val client = new MockClient("https://latest", CiriumStatusSchedule.freightFlight)
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
-    val probe = TestProbe()
+    CiriumStatusSchedule.ciriumFreightFlightTypes.foreach { freightType =>
+      val client = new MockClient("https://latest", CiriumStatusSchedule(freightType))
+      val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+      val probe = TestProbe()
 
-    val flightStatusActor: ActorRef = system
-      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor")
+      val flightStatusActor = system
+        .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), s"flight-status-actor-$freightType")
 
-    feed.start(2).map { source =>
-      source.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t")))
+      feed.start(2).map(_.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t"))))
+
+      probe.expectNoMessage(1.second)
+      flightStatusActor ! PoisonPill
     }
-
-    probe.expectNoMessage(2.seconds)
 
     success
   }
