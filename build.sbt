@@ -1,4 +1,4 @@
-import net.nmoncho.sbt.dependencycheck.settings.NvdApiSettings
+import net.nmoncho.sbt.dependencycheck.settings.{AnalyzerSettings, NvdApiSettings}
 
 lazy val scala = "2.13.16"
 lazy val pekkoVersion = "1.1.3"
@@ -68,6 +68,19 @@ publishTo := {
   else
     Some("release" at artifactory + "artifactory/libs-release-local")
 }
+
+ThisBuild / dependencyCheckAnalyzers := dependencyCheckAnalyzers.value.copy(
+  ossIndex = AnalyzerSettings.OssIndex(
+    enabled = Some(false),
+    url = None,
+    batchSize = None,
+    requestDelay = None,
+    useCache = None,
+    warnOnlyOnRemoteErrors = None,
+    username = None,
+    password = None
+  )
+)
 
 // Enable publishing the jar produced by `test:package`
 Test / packageBin / publishArtifact := true
