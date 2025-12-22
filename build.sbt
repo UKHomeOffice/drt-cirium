@@ -1,3 +1,5 @@
+import net.nmoncho.sbt.dependencycheck.settings.NvdApiSettings
+
 lazy val scala = "2.13.16"
 lazy val pekkoVersion = "1.1.3"
 lazy val pekkoHttpVersion = "1.1.0"
@@ -53,6 +55,10 @@ lazy val root = (project in file(".")).
   .enablePlugins(JavaAppPackaging)
 
 Test / fork := true
+
+val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
+
+dependencyCheckNvdApi := NvdApiSettings(apiKey = nvdAPIKey)
 
 publishTo := {
   val artifactory = "https://artifactory.digital.homeoffice.gov.uk/"
