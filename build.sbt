@@ -9,7 +9,7 @@ lazy val logBackClassicVersion = "1.4.14"
 lazy val logbackContribVersion = "0.1.5"
 lazy val jacksonDatabindVersion = "2.16.1"
 lazy val censorinusVersion = "2.1.16"
-lazy val scalatestVersion = "3.2.19"
+lazy val scalatestVersion = "3.2.20"
 lazy val janinoVersion = "3.1.11"
 
 lazy val root = (project in file(".")).
