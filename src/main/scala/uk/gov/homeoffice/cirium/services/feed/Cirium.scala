@@ -116,7 +116,7 @@ object Cirium {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
-  case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
+  case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
     def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] =
@@ -140,8 +140,18 @@ object Cirium {
             .collect {
               case CiriumFlightStatusResponseSuccess(meta, Some(statuses)) =>
                 statuses
-                  .filterNot(s => ciriumFreightFlightTypes.contains(s.schedule.flightType))
-                  .map(status => CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+                  .flatMap { status =>
+                    status.schedule match {
+                      case Some(schedule) if !ciriumFreightFlightTypes.contains(schedule.flightType) =>
+                        Some(CiriumTrackableStatus(amendCiriumFlightStatus(status), meta.url, System.currentTimeMillis))
+                      case Some(_) =>
+                        None
+                      case None =>
+                        metricsCollector.infoCounterMetric("droppedStatus-missingOrInvalidSchedule")
+                        log.warn(s"[Feed][start] Dropping flight status ${status.flightId} (${status.carrierFsCode}${status.flightNumber}) due to missing or invalid schedule")
+                        None
+                    }
+                  }
             }
             .mapConcat(identity)
         }

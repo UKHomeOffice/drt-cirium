@@ -38,7 +38,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
       MockMetricsCollector)
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     feed.start(1000).map { source =>
@@ -97,7 +97,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
           CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
           "A",
-          CiriumStatusSchedule.passengerFlight,
+          Some(CiriumStatusSchedule.passengerFlight),
           CiriumOperationalTimes(
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
             Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
@@ -134,6 +134,82 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           Seq()))))
 
     result === expected
+  }
+
+  "I should be able to parse a flight status response without a schedule" >> {
+    val client = new MockClient(flightStatusResponseWithoutSchedule, MockMetricsCollector)
+    val result = Await.result(client.fetchFlightStatus("endpoint"), 1.second)
+
+    result must beEqualTo(CiriumFlightStatusResponseSuccess(
+      CiriumRequestMetaData(
+        "item",
+        Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
+        None,
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1",
+      ),
+      Some(List(
+        CiriumFlightStatus(
+          100000,
+          "TST",
+          "TST",
+          "TST",
+          "1000",
+          "TST",
+          "LHR",
+          CiriumDate("2019-07-15T09:10:00.000Z", Option("2019-07-15T10:10:00.000")),
+          CiriumDate("2019-07-15T11:05:00.000Z", Option("2019-07-15T13:05:00.000")),
+          "A",
+          None,
+          CiriumOperationalTimes(
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            Some(CiriumDate("2019-07-15T09:10:00.000Z", Some("2019-07-15T10:10:00.000"), 1563181800000L)),
+            None,
+            None,
+            None,
+            None,
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T09:37:00.000Z", Some("2019-07-15T10:37:00.000"), 1563183420000L)),
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            Some(CiriumDate("2019-07-15T11:05:00.000Z", Some("2019-07-15T13:05:00.000"), 1563188700000L)),
+            None,
+            None,
+            None,
+            None,
+            None,
+          ),
+          Option(CiriumDelays(
+            departureGateDelayMinutes = Option(5),
+            departureRunwayDelayMinutes = None,
+            arrivalGateDelayMinutes = Option(6),
+            arrivalRunwayDelayMinutes = None,
+          )),
+          Some(CiriumFlightDurations(
+            scheduledBlockMinutes = Some(115),
+            blockMinutes = None,
+            scheduledAirMinutes = None,
+            airMinutes = None,
+            scheduledTaxiOutMinutes = None,
+            taxiOutMinutes = None,
+            scheduledTaxiInMinutes = None,
+            taxiInMinutes = None,
+          )),
+          List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
+          Some(CiriumAirportResources(None, None, Some("A"), None, None)),
+          Seq(),
+        ),
+      )),
+    ))
+  }
+
+  "I should be able to parse a flight status response with a schedule that does not include flightType" >> {
+    val client = new MockClient(flightStatusResponseWithoutFlightType, MockMetricsCollector)
+    val result = Await.result(client.fetchFlightStatus("endpoint"), 1.second)
+
+    result must beLike {
+      case CiriumFlightStatusResponseSuccess(_, Some(List(status))) =>
+        status.schedule must beNone
+    }
   }
 
   "I should get exception while parsing response that does not have request object" >> {
@@ -358,6 +434,26 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       |    ]
       |}
   """.stripMargin
+
+  def flightStatusResponseWithoutSchedule: String =
+    flightStatusResponse("J")
+      .replace(
+        """
+          |            "schedule": {
+          |                "flightType": "J",
+          |                "serviceClasses": "XXXX",
+          |                "restrictions": "",
+          |                "uplines": [],
+          |                "downlines": []
+          |            },
+          |""".stripMargin,
+        "",
+      )
+
+  def flightStatusResponseWithoutFlightType: String =
+    flightStatusResponse("J")
+      .replace("""                "flightType": "J",
+               |""".stripMargin, "")
 }
 
 class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", "", metricsCollector) {

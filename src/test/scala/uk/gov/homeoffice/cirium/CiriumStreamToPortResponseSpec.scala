@@ -64,6 +64,70 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       Future(HttpResponse(500, Nil, HttpEntity(ContentTypes.`application/json`, "Boom")))
   }
 
+  class MockClientWithoutSchedule(startUri: String)
+                                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+
+    val latestRegex: Regex = "https://latest.+".r
+    val previousRegex: Regex = "https://current/previous/.+".r
+    val forward1Regex: Regex = "https://item/1/.+".r
+    val forward3Regex: Regex = "https://item/3/.+".r
+    val forward5Regex: Regex = "https://item/5/.+".r
+    val itemUriRegEx: Regex = "https://item/(\\d).+".r
+
+    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+      val res = endpoint.toString() match {
+        case latestRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
+        case previousRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, back1hop)))
+        case forward1Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward1)))
+        case forward3Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2)))
+        case forward5Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse)))
+        case itemUriRegEx(itemId) =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponseWithoutSchedule(s"XX$itemId", itemId))))
+        case _ =>
+          Future.failed(new Exception("hmm"))
+      }
+
+      res
+    }
+  }
+
+  class MockClientWithoutFlightTypeInSchedule(startUri: String)
+                                              (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+
+    val latestRegex: Regex = "https://latest.+".r
+    val previousRegex: Regex = "https://current/previous/.+".r
+    val forward1Regex: Regex = "https://item/1/.+".r
+    val forward3Regex: Regex = "https://item/3/.+".r
+    val forward5Regex: Regex = "https://item/5/.+".r
+    val itemUriRegEx: Regex = "https://item/(\\d).+".r
+
+    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+      val res = endpoint.toString() match {
+        case latestRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
+        case previousRegex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, back1hop)))
+        case forward1Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward1)))
+        case forward3Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, forward2)))
+        case forward5Regex() =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, lastResponse)))
+        case itemUriRegEx(itemId) =>
+          Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, flightStatusResponseWithoutFlightTypeInSchedule(s"XX$itemId", itemId))))
+        case _ =>
+          Future.failed(new Exception("hmm"))
+      }
+
+      res
+    }
+  }
+
   class MockClientWithoutRequestObjectInResponse(startUri: String)
                                                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
 
@@ -160,7 +224,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a stream of messages, each should end up in the correct port" >> {
     val client = new MockClient("https://latest", CiriumStatusSchedule.passengerFlight)
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     val flightStatusActor: ActorRef = system
@@ -180,10 +244,44 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     success
   }
 
+  "Given a stream item without schedule data, it should be filtered out" >> {
+    val client = new MockClientWithoutSchedule("https://latest")
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
+    val probe = TestProbe()
+
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor-without-schedule")
+
+    feed.start(2).map { source =>
+      source.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t")))
+    }
+
+    probe.expectNoMessage(1.second)
+
+    success
+  }
+
+  "Given a stream item with schedule but no flightType, it should be filtered out" >> {
+    val client = new MockClientWithoutFlightTypeInSchedule("https://latest")
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
+    val probe = TestProbe()
+
+    val flightStatusActor: ActorRef = system
+      .actorOf(CiriumFlightStatusRouterActor.props(Map("TST" -> probe.ref)), "flight-status-actor-without-flight-type")
+
+    feed.start(2).map { source =>
+      source.runWith(Sink.actorRef(flightStatusActor, "complete", t => println(s"Failed with $t")))
+    }
+
+    probe.expectNoMessage(1.second)
+
+    success
+  }
+
   "Given a json response with a freight flight, we should not see that flight sent to the actor" >> {
     CiriumStatusSchedule.ciriumFreightFlightTypes.foreach { freightType =>
       val client = new MockClient("https://latest", CiriumStatusSchedule(freightType))
-      val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+      val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
       val probe = TestProbe()
 
       val flightStatusActor = system
@@ -200,7 +298,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a stream of messages, each should end up in the correct port even if request object is missing in json response" >> {
     val client = new MockClientWithoutRequestObjectInResponse("https://latest")
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     val flightStatusActor: ActorRef = system
@@ -222,7 +320,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given a network failure, the failed request should retry" >> {
     val client = new MockClientWithFailures("https://latest")
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     val flightStatusActor: ActorRef = system
@@ -244,7 +342,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   "Given an item with invalid json, and an item with valid json, I should see the valid item in the sink." >> {
     val client = new MockClientWithInvalidJson("https://latest")
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"))
+    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     val flightStatusActor: ActorRef = system
@@ -587,4 +685,24 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
        |    ]
        |}
     """.stripMargin
+
+  def flightStatusResponseWithoutSchedule(carrierCode: String, item: String): String =
+    flightStatusResponse(carrierCode, CiriumStatusSchedule.passengerFlight, item)
+      .replace(
+        """
+          |            "schedule": {
+          |                "flightType": "J",
+          |                "serviceClasses": "XXXX",
+          |                "restrictions": "",
+          |                "uplines": [],
+          |                "downlines": []
+          |            },
+          |""".stripMargin,
+        "",
+      )
+
+  def flightStatusResponseWithoutFlightTypeInSchedule(carrierCode: String, item: String): String =
+    flightStatusResponse(carrierCode, CiriumStatusSchedule.passengerFlight, item)
+      .replace("""                "flightType": "J",
+               |""".stripMargin, "")
 }

@@ -1,10 +1,12 @@
 package uk.gov.homeoffice.cirium
 
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.{DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
+import spray.json._
 import uk.gov.homeoffice.cirium.actors.{CiriumFeedHealthStatus, PortFeedHealthSummary, RemovalDetails}
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.health.CiriumAppHealthSummary
+
+import scala.util.Try
 
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumItemIdJsonFormat: RootJsonFormat[CiriumItemId] = jsonFormat2(CiriumItemId)
@@ -23,7 +25,19 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
     CiriumStatusSchedule.apply,
     "flightType",
   )
-  implicit val ciriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat(
+  implicit val ciriumOptionalStatusScheduleJsonFormat: JsonFormat[Option[CiriumStatusSchedule]] = new JsonFormat[Option[CiriumStatusSchedule]] {
+    override def write(obj: Option[CiriumStatusSchedule]): JsValue = obj match {
+      case Some(schedule) => schedule.toJson
+      case None => JsNull
+    }
+
+    override def read(json: JsValue): Option[CiriumStatusSchedule] = json match {
+      case JsNull => None
+      case jsValue => Try(jsValue.convertTo[CiriumStatusSchedule]).toOption
+    }
+  }
+
+  private val baseCiriumFlightStatusJsonFormat: RootJsonFormat[CiriumFlightStatus] = jsonFormat(
     CiriumFlightStatus.apply,
     "flightId",
     "carrierFsCode",
@@ -43,6 +57,17 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
     "airportResources",
     "flightStatusUpdates",
   )
+
+  implicit object ciriumFlightStatusJsonFormat extends RootJsonFormat[CiriumFlightStatus] {
+    override def write(obj: CiriumFlightStatus): JsValue = baseCiriumFlightStatusJsonFormat.write(obj)
+
+    override def read(json: JsValue): CiriumFlightStatus = json match {
+      case JsObject(fields) =>
+        baseCiriumFlightStatusJsonFormat.read(JsObject(fields + ("schedule" -> fields.getOrElse("schedule", JsNull))))
+      case _ =>
+        baseCiriumFlightStatusJsonFormat.read(json)
+    }
+  }
   implicit val ciriumFlightStatusResponseJsonFormat: RootJsonFormat[CiriumFlightStatusResponseSuccess] = jsonFormat2(CiriumFlightStatusResponseSuccess)
   implicit val ciriumTrackableStatusJsonFormat: RootJsonFormat[CiriumTrackableStatus] = jsonFormat3(CiriumTrackableStatus)
 
