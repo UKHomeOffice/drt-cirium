@@ -33,7 +33,7 @@ class FeedSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     "Not fail after repeated unsuccessful calls to the cirium endpoints" in {
       val probe = TestProbe("feedtest")
       val client = new MockClient(probe.ref)
-      val feed = Feed(client, 1.millisecond, MockBackwardsStrategy("some-url"))
+      val feed = Feed(client, 1.millisecond, MockBackwardsStrategy("some-url"), MockMetricsCollector)
 
       feed.start(1).flatMap(_.runWith(Sink.seq))
 

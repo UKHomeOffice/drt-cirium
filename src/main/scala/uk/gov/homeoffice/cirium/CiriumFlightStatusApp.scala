@@ -47,7 +47,7 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   val targetTime = new DateTime().minus(AppConfig.goBackHours.hours.toMillis)
 
-  val feed = Cirium.Feed(client, pollInterval, BackwardsStrategyImpl(client, targetTime, metricsCollector))
+  val feed = Cirium.Feed(client, pollInterval, BackwardsStrategyImpl(client, targetTime, metricsCollector), metricsCollector)
 
   val stepSize = 1000
 
