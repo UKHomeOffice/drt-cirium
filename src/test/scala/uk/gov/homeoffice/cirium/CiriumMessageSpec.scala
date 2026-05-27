@@ -2,9 +2,16 @@ package uk.gov.homeoffice.cirium
 
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightStatus, CiriumMessageFormat, CiriumOperationalTimes, CiriumStatusSchedule, CiriumTrackableStatus}
+import uk.gov.homeoffice.cirium.services.entities.{
+  CiriumDate,
+  CiriumFlightStatus,
+  CiriumMessageFormat,
+  CiriumOperationalTimes,
+  CiriumStatusSchedule,
+  CiriumTrackableStatus
+}
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class CiriumMessageSpec extends Specification {
 
@@ -36,12 +43,14 @@ class CiriumMessageSpec extends Specification {
       None,
       None,
       None,
-      None),
+      None
+    ),
     None,
     None,
     List(),
     None,
-    Seq())
+    Seq()
+  )
 
   "Given a Cirium message URL I should be able to determine its timestamp" >> {
     val uri = "https://something.something.endpoint/rest/v2/json/2020/02/12/12/32/17/751/hash"

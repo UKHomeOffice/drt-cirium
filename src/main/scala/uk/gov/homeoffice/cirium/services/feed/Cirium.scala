@@ -15,7 +15,7 @@ import uk.gov.homeoffice.cirium.services.entities.CiriumStatusSchedule.ciriumFre
 import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.matching.Regex
 
 trait CiriumClientLike {
@@ -36,8 +36,11 @@ trait CiriumClientLike {
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)
-                            (implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {
+  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(
+      implicit
+      system: ActorSystem,
+      executionContext: ExecutionContext
+  ) extends CiriumClientLike {
 
     implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
@@ -80,12 +83,14 @@ object Cirium {
           .flatMap { response =>
             response.status match {
               case StatusCodes.OK => Future.successful(response)
-              case status =>
+              case status         =>
                 log.warn(s"Status of http response is not 200 Ok $status")
                 Future.failed(new Exception(s"$status status while cirium request"))
             }
           },
-        Retry.fibonacci(180).map(_.second), maybeMaxRetries, 5.seconds
+        Retry.fibonacci(180).map(_.second),
+        maybeMaxRetries,
+        5.seconds
       )
     }
 
@@ -96,12 +101,13 @@ object Cirium {
             case StatusCodes.OK =>
               Unmarshal[HttpResponse](res)
                 .to[CiriumFlightStatusResponseSuccess].recover {
-                case error: Throwable =>
-                  log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
-                  metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
-                  CiriumFlightStatusResponseFailure(error)
-              }
-            case _ => metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
+                  case error: Throwable =>
+                    log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
+                    metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
+                    CiriumFlightStatusResponseFailure(error)
+                }
+            case _ =>
+              metricsCollector.errorCounterMetric("requestItem-ciriumResponseStatus")
               Future.failed(new Exception(s"Unable to get valid response $res"))
           }
         }
@@ -112,11 +118,19 @@ object Cirium {
         }
   }
 
-  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
+  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit
+      system: ActorSystem,
+      executionContext: ExecutionContext
+  ) extends Client(appId, appKey, entryPoint, metricsCollector) {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
-  case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) {
+  case class Feed(
+      client: CiriumClientLike,
+      pollInterval: FiniteDuration,
+      backwardsStrategy: BackwardsStrategy,
+      metricsCollector: MetricsCollector
+  )(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
     def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] =
@@ -148,7 +162,9 @@ object Cirium {
                         None
                       case None =>
                         metricsCollector.infoCounterMetric("droppedStatus-missingOrInvalidSchedule")
-                        log.warn(s"[Feed][start] Dropping flight status ${status.flightId} (${status.carrierFsCode}${status.flightNumber}) due to missing or invalid schedule")
+                        log.warn(
+                          s"[Feed][start] Dropping flight status ${status.flightId} (${status.carrierFsCode}${status.flightNumber}) due to missing or invalid schedule"
+                        )
                         None
                     }
                   }
@@ -172,9 +188,14 @@ trait BackwardsStrategy {
   def backwardsFrom(startItem: String): Future[String]
 }
 
-case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
+case class BackwardsStrategyImpl(
+    client: CiriumClientLike,
+    targetTime: DateTime,
+    metricsCollector: MetricsCollector
+)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
-  private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
+  private val dateFromUrlRegex: Regex =
+    ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
   def backwardsFrom(startItem: String): Future[String] = {
     client.backwards(startItem, 1000).flatMap { c =>

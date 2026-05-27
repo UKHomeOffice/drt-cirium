@@ -1,18 +1,18 @@
 package uk.gov.homeoffice.cirium
 
-import org.apache.pekko.actor.{ActorSystem, Scheduler}
-import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.actor.{ ActorSystem, Scheduler }
+import org.apache.pekko.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import uk.gov.homeoffice.cirium.services.feed.Retry
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
-  with SpecificationLike
-  with AfterAll {
+    with SpecificationLike
+    with AfterAll {
 
   implicit val s: Scheduler = system.scheduler
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -23,10 +23,15 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   "Given a future, it should be executed twice on a first failure" >> {
     val probe = TestProbe("retryprobe")
-    Retry.retry(Future {
-      probe.ref ! "executed"
-      throw new Exception("damn")
-    }, Seq(1.millis, 1.millis), Option(2), 1.millis)
+    Retry.retry(
+      Future {
+        probe.ref ! "executed"
+        throw new Exception("damn")
+      },
+      Seq(1.millis, 1.millis),
+      Option(2),
+      1.millis
+    )
     probe.expectMsg(1.second, "executed")
     probe.expectMsg(1.second, "executed")
     success
@@ -34,7 +39,7 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   "Given a function that returns a future, if it succeeds, should get the result" >> {
 
-    def delayedResult:  Future[String] = Future("Yes")
+    def delayedResult: Future[String] = Future("Yes")
 
     val futureResult = Retry.retry(delayedResult, fibDelays, Option(0), 1.second)
     val result = Await.result(futureResult, 1.second)
@@ -107,4 +112,3 @@ class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
   }
 
 }
-

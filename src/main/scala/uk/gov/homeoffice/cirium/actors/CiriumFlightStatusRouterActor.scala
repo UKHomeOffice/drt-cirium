@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium.actors
 
-import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{ Actor, ActorRef, Props }
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.actors.CiriumFlightStatusRouterActor._
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
@@ -26,9 +26,10 @@ object CiriumFlightStatusRouterActor {
 }
 
 case class CiriumFeedHealthStatus(
-  isReady: Boolean,
-  lastMessage: Option[CiriumTrackableStatus],
-  upTime: Long)
+    isReady: Boolean,
+    lastMessage: Option[CiriumTrackableStatus],
+    upTime: Long
+)
 
 class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)

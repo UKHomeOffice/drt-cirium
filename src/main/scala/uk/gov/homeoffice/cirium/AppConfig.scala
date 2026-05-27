@@ -2,7 +2,7 @@ package uk.gov.homeoffice.cirium
 
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
 object AppConfig {
 
@@ -26,10 +26,10 @@ object AppConfig {
 
   val ciriumAppEntryPoint: String = config.getString("cirium-feed.entry-point")
 
-   val statsdHost: String = config.getString("statsd.host")
+  val statsdHost: String = config.getString("statsd.host")
 
-   val statsdPort: Int = config.getInt("statsd.port")
+  val statsdPort: Int = config.getInt("statsd.port")
 
-   val statsdPrefix: String = config.getString("statsd.prefix")
+  val statsdPrefix: String = config.getString("statsd.prefix")
 
 }

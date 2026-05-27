@@ -1,12 +1,13 @@
 package uk.gov.homeoffice.cirium.services.entities
 
 object Generator {
-  def ciriumFlightStatus(sch: String = "2021-07-15T11:05:00.000Z",
-                         estRunway: String = "",
-                         actRunway: String = "",
-                         estGate: String = "",
-                         actGate: String = "",
-                        ): CiriumFlightStatus = CiriumFlightStatus(
+  def ciriumFlightStatus(
+      sch: String = "2021-07-15T11:05:00.000Z",
+      estRunway: String = "",
+      actRunway: String = "",
+      estGate: String = "",
+      actGate: String = ""
+  ): CiriumFlightStatus = CiriumFlightStatus(
     flightId = 100000,
     carrierFsCode = "",
     operatingCarrierFsCode = "",
@@ -34,7 +35,8 @@ object Generator {
       actualGateArrival = if (actGate.nonEmpty) Option(CiriumDate(actGate)) else None,
       scheduledRunwayArrival = Option(CiriumDate(sch)),
       estimatedRunwayArrival = if (estRunway.nonEmpty) Option(CiriumDate(estRunway)) else None,
-      actualRunwayArrival = if (actRunway.nonEmpty) Option(CiriumDate(actRunway)) else None),
+      actualRunwayArrival = if (actRunway.nonEmpty) Option(CiriumDate(actRunway)) else None
+    ),
     delays = None,
     flightDurations = None,
     codeshares = List(),

@@ -1,21 +1,21 @@
 package uk.gov.homeoffice.cirium.services.feed
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
-import org.apache.pekko.http.scaladsl.model.{HttpResponse, StatusCodes, Uri}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem }
+import org.apache.pekko.http.scaladsl.model.{ HttpResponse, StatusCodes, Uri }
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.testkit.TestProbe
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.cirium.services.feed.Cirium.Feed
-import uk.gov.homeoffice.cirium.{MockBackwardsStrategy, MockMetricsCollector}
+import uk.gov.homeoffice.cirium.{ MockBackwardsStrategy, MockMetricsCollector }
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, Future }
 
 class MockClient(probe: ActorRef)(implicit ec: ExecutionContext, system: ActorSystem)
-  extends Cirium.Client("appid", "appkey", "entrypoint", MockMetricsCollector) {
+    extends Cirium.Client("appid", "appkey", "entrypoint", MockMetricsCollector) {
 
-  override def sendReceive(uri: Uri): Future[HttpResponse] =  {
+  override def sendReceive(uri: Uri): Future[HttpResponse] = {
     probe ! uri.toString()
     Future.successful(HttpResponse(StatusCodes.BadGateway))
   }

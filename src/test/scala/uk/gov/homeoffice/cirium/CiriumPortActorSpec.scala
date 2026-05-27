@@ -9,15 +9,15 @@ import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor
-import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{GetStatuses, RemoveExpired}
+import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, RemoveExpired }
 import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
-  with SpecificationLike
-  with AfterEach {
+    with SpecificationLike
+    with AfterEach {
   sequential
   isolated
 
@@ -26,7 +26,8 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   "Flight statuses be deleted after a given period" >> {
     val portStatusActor = system.actorOf(
       CiriumPortStatusActor.props(1, () => DateTime.parse("2019-09-04T11:51:00.000Z").getMillis),
-      "test-status-actor")
+      "test-status-actor"
+    )
     implicit lazy val timeout: Timeout = 3.seconds
 
     val statusToExpire = CiriumTrackableStatus(MockFlightStatus(1, "2019-09-04T10:50:59.000Z"), "", 0L)
@@ -74,11 +75,12 @@ object MockFlightStatus {
       None,
       None,
       None,
-      None),
+      None
+    ),
     None,
     None,
     List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
     Some(CiriumAirportResources(None, None, Some("A"), None, None)),
-    Seq())
+    Seq()
+  )
 }
-
