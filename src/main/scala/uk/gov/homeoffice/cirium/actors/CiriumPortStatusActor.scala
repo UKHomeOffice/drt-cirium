@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium.actors
 
-import org.apache.pekko.actor.{Actor, Props, Timers}
+import org.apache.pekko.actor.{ Actor, Props, Timers }
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.cirium.services.entities.CiriumTrackableStatus
@@ -22,24 +22,27 @@ object CiriumPortStatusActor {
   final case object TickKey
 
   def props(
-    hoursOfHistory: Int = 24,
-    currentTimeMillisFunc: () => Long = () => new DateTime().getMillis): Props =
+      hoursOfHistory: Int = 24,
+      currentTimeMillisFunc: () => Long = () => new DateTime().getMillis
+  ): Props =
     Props(new CiriumPortStatusActor(hoursOfHistory, currentTimeMillisFunc))
 }
 
 case class RemovalDetails(lastRemovalTime: Long, totalRemoved: Int, remainingAfterRemoval: Int)
 
 case class PortFeedHealthSummary(
-  storedFlightStatuses: Int,
-  oldestMessageSent: Option[Long],
-  oldestMessageProcessed: Long,
-  newestMessageSent: Option[Long],
-  newestMessageProcessed: Long,
-  lastRemoval: Option[RemovalDetails])
+    storedFlightStatuses: Int,
+    oldestMessageSent: Option[Long],
+    oldestMessageProcessed: Long,
+    newestMessageSent: Option[Long],
+    newestMessageProcessed: Long,
+    lastRemoval: Option[RemovalDetails]
+)
 
 class CiriumPortStatusActor(
-  hoursOfHistory: Int,
-  nowMillis: () => Long) extends Actor with Timers {
+    hoursOfHistory: Int,
+    nowMillis: () => Long
+) extends Actor with Timers {
   private val log = LoggerFactory.getLogger(getClass)
 
   import CiriumPortStatusActor._
@@ -75,7 +78,8 @@ class CiriumPortStatusActor(
           0L,
           None,
           0L,
-          removalDetails)
+          removalDetails
+        )
       else {
         val oldestStatus = trackableStatuses.values.minBy(_.processedMillis)
         val newestStatus = trackableStatuses.values.maxBy(_.processedMillis)
@@ -85,7 +89,8 @@ class CiriumPortStatusActor(
           oldestStatus.processedMillis,
           newestStatus.messageIssuedAt,
           newestStatus.processedMillis,
-          removalDetails)
+          removalDetails
+        )
       }
 
       sender() ! summary
@@ -100,7 +105,9 @@ class CiriumPortStatusActor(
       val removals = RemovalDetails(System.currentTimeMillis(), forRemoval.size, trackableStatuses.size)
 
       if (removals.totalRemoved > 0) {
-        log.info(s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining")
+        log.info(
+          s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining"
+        )
         removalDetails = Option(removals)
         trackableStatuses --= forRemoval
       }

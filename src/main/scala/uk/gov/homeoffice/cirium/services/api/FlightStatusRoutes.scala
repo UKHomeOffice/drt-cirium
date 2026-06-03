@@ -5,7 +5,7 @@ import org.apache.pekko.http.scaladsl.server.Directives.{ concat, path, pathEnd,
 import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.http.scaladsl.server.directives.MethodDirectives.get
 import org.apache.pekko.http.scaladsl.server.directives.RouteDirectives.complete
-import org.apache.pekko.pattern.{ AskableActorRef, ask }
+import org.apache.pekko.pattern.{ ask, AskableActorRef }
 import uk.gov.homeoffice.cirium.{ AppConfig, JsonSupport }
 import uk.gov.homeoffice.cirium.actors.CiriumPortStatusActor.{ GetStatuses, GetTrackableStatuses }
 import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTrackableStatus }
@@ -25,7 +25,8 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
           concat(
             get {
               complete(Map("Available ports" -> AppConfig.portCodes))
-            })
+            }
+          )
         },
         path(Segment) { portCode =>
           get {
@@ -39,7 +40,8 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
               complete(maybeStatuses)
             }
           }
-        })
+        }
+      )
     }
 
   lazy val flightTrackableStatusRoutes: Route =
@@ -57,7 +59,8 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
               complete(maybeStatuses)
             }
           }
-        })
+        }
+      )
     }
 
 }

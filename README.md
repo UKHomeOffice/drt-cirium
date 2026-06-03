@@ -23,6 +23,20 @@ NO_JSON_LOGGING= \
 sbt run | tee cirium.log
 ```
 
+## Run the test script
+
+From the project root, run:
+
+```bash
+./run_tests.sh
+```
+
+This runs the repository's standard local verification flow:
+
+```bash
+sbt clean scalafmtAll compile coverage test coverageOff coverageReport dependencyUpdates
+```
+
 Make sure to replace `<secret>` with your actual Cirium API credentials from Kubernetes secrets
 
 You'll need to be connected to the ACP prod VPN to access secrets

@@ -5,7 +5,7 @@ import org.apache.pekko.http.scaladsl.server.Directives._
 import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledResponse}
+import uk.gov.homeoffice.cirium.services.entities.{ CiriumScheduledFlightRequest, CiriumScheduledResponse }
 
 import scala.concurrent.Future
 
@@ -24,15 +24,19 @@ trait FlightScheduledRoutes extends CiriumBaseRoutes {
           complete(
             client
               .makeRequest(
-                endpoint = s"$scheduleApiEndpoint/${csfRequest.flightCode}/${csfRequest.flightNumber}/departing/${csfRequest.year}/${csfRequest.month}/${csfRequest.day}",
-                maybeMaxRetries = Option(0))
+                endpoint =
+                  s"$scheduleApiEndpoint/${csfRequest.flightCode}/${csfRequest.flightNumber}/departing/${csfRequest.year}/${csfRequest.month}/${csfRequest.day}",
+                maybeMaxRetries = Option(0)
+              )
               .flatMap(res => {
-                val futureStatusResponse: Future[CiriumScheduledResponse] = Unmarshal[HttpResponse](res).to[CiriumScheduledResponse]
+                val futureStatusResponse: Future[CiriumScheduledResponse] =
+                  Unmarshal[HttpResponse](res).to[CiriumScheduledResponse]
                 futureStatusResponse.map { statusResponse =>
                   logger.info(s"statusResponse $statusResponse for cirium ScheduledFlightRequest $csfRequest")
                 }
                 futureStatusResponse
-              }))
+              })
+          )
         }
 
       }

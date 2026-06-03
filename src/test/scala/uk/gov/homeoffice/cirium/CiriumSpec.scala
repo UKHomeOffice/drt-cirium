@@ -5,23 +5,23 @@ import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.pattern.pipe
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Sink
-import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.testkit.{ TestKit, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
+import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategy, Cirium }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
 
 case class MockBackwardsStrategy(url: String)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   override def backwardsFrom(startItem: String): Future[String] = Future.successful(url)
 }
 
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
-  with SpecificationLike
-  with AfterEach {
+    with SpecificationLike
+    with AfterEach {
   sequential
   isolated
 
@@ -37,8 +37,10 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
-      MockMetricsCollector)
-    val feed = Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
+      MockMetricsCollector
+    )
+    val feed =
+      Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy("https://item/1"), MockMetricsCollector)
     val probe = TestProbe()
 
     feed.start(1000).map { source =>
@@ -58,7 +60,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
     val expected = CiriumInitialResponse(
       CiriumRequestMetaData("latest", None, None, "https://endpoint/rest/v2/json/latest"),
-      "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abcd34")
+      "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abcd34"
+    )
     result === expected
   }
 
@@ -69,7 +72,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 
     val expected = CiriumItemListResponse(List(
       "https://endpoint/rest/v2/json/2019/08/19/11/01/28/469/FFF",
-      "https://endpoint/rest/v2/json/2019/08/19/11/01/28/475/XXX"))
+      "https://endpoint/rest/v2/json/2019/08/19/11/01/28/475/XXX"
+    ))
 
     result === expected
   }
@@ -84,7 +88,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
         "item",
         Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
         None,
-        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"),
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"
+      ),
       Option(List(
         CiriumFlightStatus(
           100000,
@@ -114,12 +119,14 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
             None,
             None,
             None,
-            None),
+            None
+          ),
           Option(CiriumDelays(
             departureGateDelayMinutes = Option(5),
             departureRunwayDelayMinutes = None,
             arrivalGateDelayMinutes = Option(6),
-            arrivalRunwayDelayMinutes = None)),
+            arrivalRunwayDelayMinutes = None
+          )),
           Some(CiriumFlightDurations(
             scheduledBlockMinutes = Some(115),
             blockMinutes = None,
@@ -128,10 +135,14 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
             scheduledTaxiOutMinutes = None,
             taxiOutMinutes = None,
             scheduledTaxiInMinutes = None,
-            taxiInMinutes = None)),
+            taxiInMinutes = None
+          )),
           List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
           Some(CiriumAirportResources(None, None, Some("A"), None, None)),
-          Seq()))))
+          Seq()
+        )
+      ))
+    )
 
     result === expected
   }
@@ -145,7 +156,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
         "item",
         Some(CiriumItemId("2019/08/14/09/40/39/111/abdde1", "2019/08/14/09/40/39/111/abdde1")),
         None,
-        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1",
+        "https://endpoint/rest/v2/json/2019/08/14/09/40/39/111/abdde1"
       ),
       Some(List(
         CiriumFlightStatus(
@@ -176,13 +187,13 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
             None,
             None,
             None,
-            None,
+            None
           ),
           Option(CiriumDelays(
             departureGateDelayMinutes = Option(5),
             departureRunwayDelayMinutes = None,
             arrivalGateDelayMinutes = Option(6),
-            arrivalRunwayDelayMinutes = None,
+            arrivalRunwayDelayMinutes = None
           )),
           Some(CiriumFlightDurations(
             scheduledBlockMinutes = Some(115),
@@ -192,13 +203,13 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
             scheduledTaxiOutMinutes = None,
             taxiOutMinutes = None,
             scheduledTaxiInMinutes = None,
-            taxiInMinutes = None,
+            taxiInMinutes = None
           )),
           List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
           Some(CiriumAirportResources(None, None, Some("A"), None, None)),
-          Seq(),
-        ),
-      )),
+          Seq()
+        )
+      ))
     ))
   }
 
@@ -447,16 +458,22 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
           |                "downlines": []
           |            },
           |""".stripMargin,
-        "",
+        ""
       )
 
   def flightStatusResponseWithoutFlightType: String =
     flightStatusResponse("J")
-      .replace("""                "flightType": "J",
-               |""".stripMargin, "")
+      .replace(
+        """                "flightType": "J",
+               |""".stripMargin,
+        ""
+      )
 }
 
-class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", "", metricsCollector) {
+class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit
+    system: ActorSystem,
+    executionContext: ExecutionContext
+) extends Cirium.Client("", "", "", metricsCollector) {
   def sendReceive(endpoint: Uri): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }

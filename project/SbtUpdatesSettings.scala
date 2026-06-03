@@ -1,0 +1,17 @@
+import com.timushev.sbt.updates.UpdatesPlugin.autoImport.{
+  dependencyUpdatesFailBuild,
+  dependencyUpdatesFilter,
+  moduleFilterRemoveValue
+}
+import sbt.*
+
+object SbtUpdatesSettings {
+  val sbtUpdatesSettings: Seq[Def.Setting[?]] = Seq(
+    dependencyUpdatesFailBuild := false,
+    dependencyUpdatesFilter -= moduleFilter("org.scala-lang"),
+    dependencyUpdatesFilter -= moduleFilter("org.apache.pekko"),
+    dependencyUpdatesFilter -= moduleFilter("com.fasterxml.jackson.core") // to be reviewed manually for compatibility with Pekko
+    // Pekko updates are intentionally reviewed manually because they are higher risk in this repo.
+    // Keep them out of the default dependencyUpdates output so the report stays focused on lower-risk upgrades.
+  )
+}

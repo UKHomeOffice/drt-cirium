@@ -8,11 +8,15 @@ import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.cirium.services.api.FlightScheduledRoutes
-import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest, CiriumScheduledFlights, CiriumScheduledResponse}
+import uk.gov.homeoffice.cirium.services.entities.{
+  CiriumScheduledFlightRequest,
+  CiriumScheduledFlights,
+  CiriumScheduledResponse
+}
 import uk.gov.homeoffice.cirium.services.feed.Cirium
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.io.Source
 
 class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
@@ -32,9 +36,12 @@ class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes
       carrierFsCode = "ASD",
       departureAirportFsCode = "KIV",
       departureTime = "2021-01-21T19:25:00.000",
-      flightNumber = "23456"))
+      flightNumber = "23456"
+    )
+  )
 
-  def httpResponse(jsonString: String): HttpResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonString))
+  def httpResponse(jsonString: String): HttpResponse =
+    HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonString))
 
   "Given json string" should {
     "UnMarshal httpResponse to CiriumScheduledResponse object" in {
