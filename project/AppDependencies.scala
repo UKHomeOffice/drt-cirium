@@ -17,7 +17,7 @@ object AppDependencies {
     "joda-time"                  % "joda-time"             % "2.14.2",
     "ch.qos.logback.contrib"     % "logback-json-classic"  % logbackContribVersion,
     "ch.qos.logback.contrib"     % "logback-jackson"       % logbackContribVersion,
-    "com.fasterxml.jackson.core" % "jackson-databind"      % "2.21.3",
+    "com.fasterxml.jackson.core" % "jackson-databind"      % "2.20.1", // for compatibility with deps in Drtv2
     "org.codehaus.janino"        % "janino"                % "3.1.12"
   )
 
