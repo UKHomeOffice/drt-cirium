@@ -12,12 +12,16 @@ import uk.gov.homeoffice.cirium.services.entities.{ CiriumFlightStatus, CiriumTr
 
 import scala.language.postfixOps
 
+/**
+ * Routes that expose per-port flight status data from in-memory actors.
+ */
 trait FlightStatusRoutes extends CiriumBaseRoutes {
 
   def portActors: Map[String, ActorRef]
 
   import JsonSupport._
 
+  /** Returns plain flight statuses for a requested port code. */
   lazy val flightStatusRoutes: Route =
     pathPrefix("statuses") {
       concat(
@@ -42,6 +46,7 @@ trait FlightStatusRoutes extends CiriumBaseRoutes {
         })
     }
 
+  /** Returns trackable statuses (including feed metadata) for a requested port code. */
   lazy val flightTrackableStatusRoutes: Route =
     pathPrefix("statuses-tracked") {
       concat(

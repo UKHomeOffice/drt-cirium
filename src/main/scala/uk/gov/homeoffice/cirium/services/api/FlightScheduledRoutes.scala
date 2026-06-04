@@ -9,14 +9,19 @@ import uk.gov.homeoffice.cirium.services.entities.{CiriumScheduledFlightRequest,
 
 import scala.concurrent.Future
 
+/**
+ * Route for querying Cirium scheduled-flight data for a specific flight/date.
+ */
 trait FlightScheduledRoutes extends CiriumBaseRoutes {
 
   import uk.gov.homeoffice.cirium.JsonSupport._
 
   private val logger = LoggerFactory.getLogger(getClass)
 
+  /** Base endpoint used to request schedules from Cirium. */
   val scheduleApiEndpoint = "https://api.flightstats.com/flex/schedules/rest/v1/json/flight"
 
+  /** GET route that proxies a schedule lookup to Cirium. */
   val flightScheduledRoute: Route = pathPrefix("flightScheduled") {
     pathEndOrSingleSlash {
       get {

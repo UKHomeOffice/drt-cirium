@@ -7,8 +7,10 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
+/** Retry helpers with delayed re-execution support. */
 object Retry {
   private val log = LoggerFactory.getLogger(getClass)
+  /** Fibonacci-like delay sequence capped at `max`. */
   def fibonacci(max: Int): Stream[Int] = 0 #:: 1 #:: (fibonacci(max) zip fibonacci(max).tail).map { t =>
     (t._1 + t._2) match {
       case overMax if max < overMax => max
@@ -16,6 +18,11 @@ object Retry {
     }
   }
 
+  /**
+   * Retries a failing future according to provided delays.
+   *
+   * Retries stop when `maybeMaxRetries` reaches zero, or continue indefinitely when empty.
+   */
   def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], maybeMaxRetries: Option[Int], defaultDelay: FiniteDuration)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[T] = {
     futureToRetry.recoverWith {
       case e if maybeMaxRetries.isEmpty || 0 < maybeMaxRetries.get =>

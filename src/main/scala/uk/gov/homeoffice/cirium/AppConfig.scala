@@ -4,6 +4,12 @@ import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
+/**
+ * Typed accessors for application configuration.
+ *
+ * Values are loaded from `application.conf` and used to configure feed polling,
+ * retention windows, Cirium credentials, and metrics wiring.
+ */
 object AppConfig {
 
   private val config = ConfigFactory.load()

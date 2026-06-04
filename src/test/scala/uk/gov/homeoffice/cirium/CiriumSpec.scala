@@ -15,10 +15,12 @@ import uk.gov.homeoffice.cirium.services.feed.{BackwardsStrategy, Cirium}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
+/** Fixed backwards strategy used to make feed tests deterministic. */
 case class MockBackwardsStrategy(url: String)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   override def backwardsFrom(startItem: String): Future[String] = Future.successful(url)
 }
 
+/** Unit tests for Cirium client parsing and feed bootstrap behaviour. */
 class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
   with AfterEach {
@@ -360,6 +362,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   """.stripMargin
 }
 
+/** Generic mock client returning a fixed HTTP payload. */
 class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", "", metricsCollector) {
   def sendReceive(endpoint: Uri): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))

@@ -6,6 +6,9 @@ import uk.gov.homeoffice.cirium.actors.{CiriumFeedHealthStatus, PortFeedHealthSu
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.cirium.services.health.CiriumAppHealthSummary
 
+/**
+ * JSON marshalling/unmarshalling formats for Cirium entities and health payloads.
+ */
 object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumItemIdJsonFormat: RootJsonFormat[CiriumItemId] = jsonFormat2(CiriumItemId)
   implicit val ciriumDateJsonFormat: RootJsonFormat[CiriumDate] = CiriumDateProtocol.CiriumDateFormat
@@ -56,8 +59,15 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumScheduledArrivalRequestJsonFormats: RootJsonFormat[CiriumScheduledFlightRequest] = jsonFormat5(CiriumScheduledFlightRequest)
 }
 
+/**
+ * Custom Cirium date JSON protocol.
+ *
+ * The API can omit `millis` and sometimes `dateLocal`, so parsing is tolerant and
+ * computes the epoch from `dateUtc`.
+ */
 object CiriumDateProtocol extends DefaultJsonProtocol {
 
+  /** JSON format that serializes both local/utc strings and epoch millis. */
   implicit object CiriumDateFormat extends RootJsonFormat[CiriumDate] {
     def write(cd: CiriumDate) =
 

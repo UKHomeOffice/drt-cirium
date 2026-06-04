@@ -8,6 +8,11 @@ import uk.gov.homeoffice.cirium.services.feed.Cirium
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+/**
+ * Common dependencies required by all route traits.
+ *
+ * Concrete applications mix this in and provide actor/system context and a Cirium client.
+ */
 trait CiriumBaseRoutes {
 
   implicit def executionContext: ExecutionContext

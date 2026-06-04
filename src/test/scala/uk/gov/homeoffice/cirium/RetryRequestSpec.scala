@@ -10,6 +10,7 @@ import uk.gov.homeoffice.cirium.services.feed.Retry
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
+/** Tests retry helper behaviour for success and failure retry limits. */
 class RetryRequestSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
   with AfterAll {

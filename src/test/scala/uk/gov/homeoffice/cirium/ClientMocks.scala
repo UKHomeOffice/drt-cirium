@@ -7,6 +7,7 @@ import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 import scala.concurrent.{ExecutionContext, Future}
 
 
+/** Mock client that supports only initialRequest with a fixed latest item link. */
 case class MockClientWithInitialResponseOnly(firstItemLink: String)
                                             (implicit ec: ExecutionContext) extends CiriumClientLike {
 
@@ -24,6 +25,7 @@ case class MockClientWithInitialResponseOnly(firstItemLink: String)
   override def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
 }
 
+/** Mock client that always fails initialRequest to simulate connectivity loss. */
 case class MockClientWithFailure(firstItemLink: String)
                                 (implicit ec: ExecutionContext)extends CiriumClientLike {
 

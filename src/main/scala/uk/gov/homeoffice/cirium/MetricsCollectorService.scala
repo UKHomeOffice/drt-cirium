@@ -2,6 +2,7 @@ package uk.gov.homeoffice.cirium
 
 import github.gphat.censorinus.StatsDClient
 
+/** Minimal metrics abstraction used by feed and health components. */
 trait MetricsCollector {
 
   def errorCounterMetric(name: String, value: Double = 1)
@@ -10,6 +11,7 @@ trait MetricsCollector {
 
 }
 
+/** StatsD-backed implementation of [[MetricsCollector]]. */
 case class MetricsCollectorService(statsd: StatsDClient) extends MetricsCollector {
 
   def counterMetric(name: String, value: Double): Unit = {

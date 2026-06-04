@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
+/** Interface used by feed and health components to talk to Cirium endpoints. */
 trait CiriumClientLike {
   def initialRequest(): Future[CiriumInitialResponse]
 
@@ -33,9 +34,11 @@ trait CiriumClientLike {
 
 }
 
+/** Cirium client and stream construction utilities. */
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
+  /** Base HTTP client implementation shared by prod and test clients. */
   abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)
                             (implicit system: ActorSystem, executionContext: ExecutionContext) extends CiriumClientLike {
 
@@ -112,13 +115,18 @@ object Cirium {
         }
   }
 
+  /** Production Cirium client backed by Pekko HTTP single requests. */
   class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit system: ActorSystem, executionContext: ExecutionContext) extends Client(appId, appKey, entryPoint, metricsCollector) {
     override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
+  /**
+   * Polling feed builder that starts from a historical point and then streams forwards.
+   */
   case class Feed(client: CiriumClientLike, pollInterval: FiniteDuration, backwardsStrategy: BackwardsStrategy)(implicit system: ActorSystem, executionContext: ExecutionContext) {
     implicit val timeout: Timeout = new Timeout(5.seconds)
 
+    /** Builds a source of trackable statuses from Cirium list/item endpoints. */
     def start(step: Int): Future[Source[CiriumTrackableStatus, NotUsed]] =
       client.initialRequest()
         .flatMap(cir => backwardsStrategy.backwardsFrom(cir.item))
@@ -147,6 +155,7 @@ object Cirium {
         }
   }
 
+  /** Applies small data fixes for known port-specific quirks in Cirium payloads. */
   def amendCiriumFlightStatus(status: CiriumFlightStatus): CiriumFlightStatus = {
     val isSingleTerminalPort = Set("ABZ", "CWL", "HUY", "INV", "LBA", "SEN", "SOU", "BOH", "MME", "NQY", "NWI")
       .contains(status.arrivalAirportFsCode.toUpperCase)
@@ -158,10 +167,12 @@ object Cirium {
   }
 }
 
+/** Strategy for choosing the first feed item to process. */
 trait BackwardsStrategy {
   def backwardsFrom(startItem: String): Future[String]
 }
 
+/** Walks backwards through feed pages until the configured target time is reached. */
 case class BackwardsStrategyImpl(client: CiriumClientLike, targetTime: DateTime, metricsCollector: MetricsCollector)(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
   private val dateFromUrlRegex: Regex = ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r

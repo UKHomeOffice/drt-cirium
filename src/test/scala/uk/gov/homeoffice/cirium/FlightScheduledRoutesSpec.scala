@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
 
+/** Tests scheduled-flight route unmarshalling and endpoint response shape. */
 class FlightScheduledRoutesSpec extends Specification with FlightScheduledRoutes with Specs2RouteTest {
 
   implicit val mat: Materializer = Materializer.createMaterializer(system)

@@ -10,6 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
+/** Verifies app health decisions across latency and connectivity scenarios. */
 class CiriumHealthSpec extends Specification {
 
   val ciriumStatus: CiriumFlightStatus = CiriumFlightStatus(

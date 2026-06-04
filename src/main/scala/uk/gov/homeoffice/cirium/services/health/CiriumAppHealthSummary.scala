@@ -15,9 +15,11 @@ import uk.gov.homeoffice.cirium.services.feed.CiriumClientLike
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
 
+/** Aggregated application health across router and all port actors. */
 case class CiriumAppHealthSummary(feedHealth: CiriumFeedHealthStatus,
                                   portFeedHealthSummaries: Map[String, PortFeedHealthSummary])
 
+/** Builds [[CiriumAppHealthSummary]] by querying router and per-port actors. */
 object CiriumAppHealthSummaryConstructor {
   implicit lazy val timeout: Timeout = 3.seconds
 
@@ -39,6 +41,10 @@ object CiriumAppHealthSummaryConstructor {
   }
 }
 
+/**
+ * Evaluates whether the app is healthy by comparing processed feed state
+ * with the latest message currently available from Cirium.
+ */
 case class AppHealthCheck(acceptableMessageLatency: FiniteDuration,
                           acceptableLostConnectivityDuration: FiniteDuration,
                           ciriumClient: CiriumClientLike,

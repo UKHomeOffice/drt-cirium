@@ -6,6 +6,7 @@ import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightStatu
 
 import scala.util.{Failure, Success}
 
+/** Tests URI timestamp parsing and in-sync evaluation for trackable messages. */
 class CiriumMessageSpec extends Specification {
 
   val ciriumStatus = CiriumFlightStatus(

@@ -12,6 +12,7 @@ import uk.gov.homeoffice.cirium.{MockBackwardsStrategy, MockMetricsCollector}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
+/** Mock feed client that records outgoing URIs and returns a failed status code. */
 class MockClient(probe: ActorRef)(implicit ec: ExecutionContext, system: ActorSystem)
   extends Cirium.Client("appid", "appkey", "entrypoint", MockMetricsCollector) {
 
@@ -21,6 +22,7 @@ class MockClient(probe: ActorRef)(implicit ec: ExecutionContext, system: ActorSy
   }
 }
 
+/** Regression test for feed behaviour under repeated upstream failures. */
 class FeedSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   implicit val system: ActorSystem = ActorSystem("feedtest")
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global

@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 
 import scala.concurrent.duration.DurationInt
 
+/** Verifies estimated/actual derived timestamp fields on [[CiriumFlightStatus]]. */
 class CiriumFlightStatusSpec extends Specification {
   val scheduled = "2022-06-01T00:00"
   val estimatedRunway = "2022-06-01T00:01"

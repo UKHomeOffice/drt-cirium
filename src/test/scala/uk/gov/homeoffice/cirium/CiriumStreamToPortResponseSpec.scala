@@ -16,6 +16,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.matching.Regex
 
+/**
+ * End-to-end feed tests that exercise Cirium.Feed parsing, filtering, and actor routing.
+ */
 class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike with AfterEach {
   sequential
@@ -23,6 +26,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
+  /** Happy-path mock that returns paged item lists and valid item payloads. */
   class MockClient(startUri: String, scheduleType: CiriumStatusSchedule)
                   (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
 
@@ -56,6 +60,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  /** Mock returning HTTP 500 for all requests. */
   class MockClientWith500Response(startUri: String)
                                  (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
     override val flightStatusMaxRetries: Option[Int] = Option(0)
@@ -64,6 +69,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       Future(HttpResponse(500, Nil, HttpEntity(ContentTypes.`application/json`, "Boom")))
   }
 
+  /** Mock with item payloads that omit the top-level request object. */
   class MockClientWithoutRequestObjectInResponse(startUri: String)
                                                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
 
@@ -100,6 +106,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  /** Mock that fails once to verify retry behaviour on transient errors. */
   class MockClientWithFailures(startUri: String)
                               (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
 
@@ -129,6 +136,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  /** Mock that returns one malformed item among otherwise valid responses. */
   class MockClientWithInvalidJson(startUri: String)
                                  (implicit system: ActorSystem, executionContext: ExecutionContext) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
 

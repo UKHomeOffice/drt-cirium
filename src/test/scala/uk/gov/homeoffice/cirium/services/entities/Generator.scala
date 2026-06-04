@@ -1,5 +1,6 @@
 package uk.gov.homeoffice.cirium.services.entities
 
+/** Test fixture generator for building Cirium flight status instances. */
 object Generator {
   def ciriumFlightStatus(sch: String = "2021-07-15T11:05:00.000Z",
                          estRunway: String = "",

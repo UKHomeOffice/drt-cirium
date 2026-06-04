@@ -15,6 +15,7 @@ import uk.gov.homeoffice.cirium.services.entities._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+/** Verifies per-port actor retention and expiry behaviour. */
 class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty()))
   with SpecificationLike
   with AfterEach {
@@ -44,6 +45,7 @@ class CiriumPortActorSpec extends TestKit(ActorSystem("testActorSystem", ConfigF
   }
 }
 
+/** Test helper that builds minimal valid [[CiriumFlightStatus]] values. */
 object MockFlightStatus {
 
   def apply(id: Int, scheduledDate: String): CiriumFlightStatus = CiriumFlightStatus(

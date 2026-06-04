@@ -11,24 +11,41 @@ import scala.util.Failure
 
 object CiriumPortStatusActor {
 
+  /** Returns a plain list of flight statuses currently held in memory for this port. */
   final case object GetStatuses
 
+  /** Returns full trackable status objects currently held in memory for this port. */
   final case object GetTrackableStatuses
 
+  /** Returns feed-health metadata derived from this port actor's in-memory state. */
   final case object GetPortFeedHealthSummary
 
+  /** Triggers removal of entries older than the configured history window. */
   final case object RemoveExpired
 
+  /** Timer key for the periodic expiration task. */
   final case object TickKey
 
+  /**
+   * Creates a per-port actor that stores the latest known status per flight id.
+   *
+   * @param hoursOfHistory number of historical hours to keep in memory before expiry
+   * @param currentTimeMillisFunc clock function injected for testability
+   */
   def props(
     hoursOfHistory: Int = 24,
     currentTimeMillisFunc: () => Long = () => new DateTime().getMillis): Props =
     Props(new CiriumPortStatusActor(hoursOfHistory, currentTimeMillisFunc))
 }
 
+/** Metadata about the most recent expiration sweep. */
 case class RemovalDetails(lastRemovalTime: Long, totalRemoved: Int, remainingAfterRemoval: Int)
 
+/**
+ * Health summary for a single port actor's feed cache.
+ *
+ * All values are derived from in-memory statuses currently retained by the actor.
+ */
 case class PortFeedHealthSummary(
   storedFlightStatuses: Int,
   oldestMessageSent: Option[Long],
@@ -37,6 +54,12 @@ case class PortFeedHealthSummary(
   newestMessageProcessed: Long,
   lastRemoval: Option[RemovalDetails])
 
+/**
+ * Per-port in-memory cache of Cirium trackable statuses.
+ *
+ * The actor keeps one status per flight id, supports query messages from routes,
+ * and periodically removes expired flights based on arrival time.
+ */
 class CiriumPortStatusActor(
   hoursOfHistory: Int,
   nowMillis: () => Long) extends Actor with Timers {
@@ -44,12 +67,14 @@ class CiriumPortStatusActor(
 
   import CiriumPortStatusActor._
 
+  /** Latest known trackable status by flight id. */
   val trackableStatuses: mutable.Map[Int, CiriumTrackableStatus] = mutable.Map[Int, CiriumTrackableStatus]()
 
   var latestStatus: Option[CiriumTrackableStatus] = None
 
   var removalDetails: Option[RemovalDetails] = None
 
+  /** Retention period used by RemoveExpired sweeps. */
   val expireAfterMillis: Long = hoursOfHistory * 60 * 60 * 1000
 
   timers.startTimerAtFixedRate(TickKey, RemoveExpired, 60.seconds)

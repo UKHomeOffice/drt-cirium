@@ -19,6 +19,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+/**
+ * Routes for app health, readiness, and per-port operational status checks.
+ */
 trait StatusRoutes extends CiriumBaseRoutes {
 
   import JsonSupport._
@@ -31,6 +34,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
+  /** Exposes app-details endpoints including readiness and health checks. */
   lazy val appStatusRoutes: Route =
     pathPrefix("app-details") {
       concat(
