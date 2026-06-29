@@ -7,6 +7,14 @@ platform:
   os: linux
   arch: amd64
 
+services:
+  - name: docker
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    resources:
+      limits:
+        cpu: 1000
+        memory: 1024Mi
+
 steps:
   - name: build
     pull: if-not-exists
@@ -42,6 +50,84 @@ steps:
     depends_on:
       - build
 
+  - name: analysis
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - bash ./run_tests.sh
+      - sbt scapegoat | true
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+    depends_on:
+      - publish
+
+  - name: pull-image-for-scan
+    pull: Always
+    image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
+    resources:
+      limits:
+        cpu: 100
+        memory: 256Mi
+    commands:
+      - n=0; until docker info >/dev/null 2>&1 || [ "$n" -ge 60 ]; do n=$(( n + 1 )); sleep 1; done
+      - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      - docker pull 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-cirium:B${DRONE_BUILD_NUMBER}
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION: eu-west-2
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ""
+    when:
+      event:
+        - push
+    depends_on:
+      - publish
+
+  - name: scan-image
+    pull: Always
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+    resources:
+      limits:
+        cpu: 1000
+        memory: 1024Mi
+    environment:
+      FAIL_ON_DETECTION: false
+      SEVERITY: MEDIUM,HIGH,CRITICAL
+      IMAGE_NAME: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-cirium:B${DRONE_BUILD_NUMBER}
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION: eu-west-2
+    when:
+      event:
+        - push
+    depends_on:
+      - pull-image-for-scan
+
+  - name: sonar-scanner
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v7.3
+    commands:
+      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER}
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - analysis
+
   - name: Slack notification
     pull: if-not-exists
     image: plugins/slack
@@ -56,63 +142,6 @@ steps:
       event:
         - push
     depends_on:
-      - publish
-
-  - name: analysis
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
-    commands:
-      - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 -mem 4096 -J-XX:+UseG1GC coverage test coverageReport
-      - sbt scalastyle | true
-      - sbt scapegoat | true
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-    when:
-      branch: master
-      event:
-        - push
-    depends_on:
-      - build
-
-  - name: Dependency check
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
-    commands:
-      - /root/entrypoint.sh
-      - sbt -Dlog4j2.level=info dependencyCheck
-    environment:
-      NVD_API_KEY:
-        from_secret: NVD_API_KEY_SECRET
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      event:
-        - push
-      branch:
-        - master
-    depends_on:
-      - analysis
-
-  - name: sonar-scanner
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v7.3
-    commands:
-      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER}
-    environment:
-      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
-    when:
-      branch:
-        - master
-      event:
-        - push
-    depends_on:
-      - Dependency check
+      - scan-image
+      - sonar-scanner
 ...
