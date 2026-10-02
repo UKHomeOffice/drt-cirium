@@ -26,7 +26,7 @@ object Retry {
       case e if maybeMaxRetries.isEmpty || 0 < maybeMaxRetries.get =>
         val nextDelayDuration = delay.headOption.getOrElse(defaultDelay)
         log.warn(
-          s"Future failed. Trying again after $nextDelayDuration. ${maybeMaxRetries.getOrElse("Unlimited")} retries remaining",
+          s"[Retry][retry] Future failed. Trying again after $nextDelayDuration. ${maybeMaxRetries.getOrElse("Unlimited")} retries remaining",
           e
         )
         after(nextDelayDuration)(retry(futureToRetry, delay.tail, maybeMaxRetries.map(_ - 1), defaultDelay))

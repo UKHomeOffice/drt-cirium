@@ -56,7 +56,11 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   feed
     .start(step = stepSize)
-    .map(_.runWith(Sink.actorRef(flightStatusActor, "complete", t => log.error("Failure", t))))
+    .map(_.runWith(Sink.actorRef(
+      flightStatusActor,
+      "complete",
+      t => log.error("[CiriumFlightStatusApp][feed] Failure", t)
+    )))
 
   lazy val routes: Route = flightStatusRoutes ~ flightTrackableStatusRoutes ~ appStatusRoutes
 
@@ -64,9 +68,11 @@ object CiriumFlightStatusApp extends App with FlightStatusRoutes with StatusRout
 
   serverBinding.onComplete {
     case Success(bound) =>
-      log.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
+      log.info(
+        s"[CiriumFlightStatusApp][serverBinding] Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/"
+      )
     case Failure(e) =>
-      log.error(s"Server could not start!", e)
+      log.error(s"[CiriumFlightStatusApp][serverBinding] Server could not start", e)
       system.terminate()
   }
   Await.result(system.whenTerminated, Duration.Inf)

@@ -57,7 +57,7 @@ trait StatusRoutes extends CiriumBaseRoutes {
                     HttpResponse(StatusCodes.BadGateway)
                 }.recover {
                   case exception: Exception =>
-                    logger.error("Unable to check health data", exception)
+                    logger.error("[StatusRoutes][is-healthy] Unable to check health data", exception)
                     HttpResponse(StatusCodes.BadGateway)
                 }
               })
@@ -70,10 +70,10 @@ trait StatusRoutes extends CiriumBaseRoutes {
             val response = (askableFlightStatusActor ? GetReadiness)
               .mapTo[Boolean].map { ready =>
                 if (ready) {
-                  logger.info(s"Ready to handle requests")
+                  logger.info("[StatusRoutes][is-ready] Ready to handle requests")
                   HttpResponse(StatusCodes.NoContent)
                 } else {
-                  logger.info(s"Not ready to handle requests")
+                  logger.info("[StatusRoutes][is-ready] Not ready to handle requests")
                   HttpResponse(StatusCodes.BadGateway)
                 }
               }

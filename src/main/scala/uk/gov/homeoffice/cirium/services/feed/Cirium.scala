@@ -59,7 +59,7 @@ object Cirium {
       makeRequest(latestFeedEndpoint, initialRequestMaxRetries).flatMap { res =>
         Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
           case e =>
-            log.error(s"Error while parsing initialRequest", e)
+            log.error(s"[Client][initialRequest] Error while parsing initial request", e)
             Future.failed(new Exception(s"Error while making InitialRequest", e))
         }
       }
@@ -76,7 +76,7 @@ object Cirium {
         .flatMap(res => Unmarshal[HttpResponse](res).to[CiriumItemListResponse])
         .recover {
           case error: Throwable =>
-            log.error(s"Failed to get a response from cirium end point: ${error.getMessage}")
+            log.error(s"[Client][fetchItemList] Failed to get a response from Cirium endpoint: ${error.getMessage}")
             metricsCollector.errorCounterMetric("fetchItemList-CiriumItemListResponse")
             CiriumItemListResponse.empty
         }
@@ -84,7 +84,9 @@ object Cirium {
     private def safeEndpoint(endpoint: String): String = Uri(endpoint).withQuery(Uri.Query.Empty).toString()
 
     private def recordRequestFailure(endpoint: String, status: StatusCode): Unit = {
-      log.warn(s"Cirium request failed: endpoint=${safeEndpoint(endpoint)} status=$status")
+      log.warn(
+        s"[Client][recordRequestFailure] Cirium request failed: endpoint=${safeEndpoint(endpoint)} status=$status"
+      )
       metricsCollector.errorCounterMetric(s"$requestFailureMetric-${status.intValue()}")
     }
 
@@ -124,7 +126,7 @@ object Cirium {
                 .to[CiriumFlightStatusResponseSuccess].recover {
                   case error: Throwable =>
                     log.error(
-                      s"Error parsing CiriumFlightStatusResponseSuccess from $endpointDescription: ${error.getMessage}"
+                      s"[Client][fetchFlightStatus] Error parsing CiriumFlightStatusResponseSuccess from $endpointDescription: ${error.getMessage}"
                     )
                     metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
                     CiriumFlightStatusResponseFailure(error)
@@ -136,7 +138,7 @@ object Cirium {
         }
         .recover {
           case t =>
-            log.error(s"Failed to request item $endpointDescription")
+            log.error(s"[Client][fetchFlightStatus] Failed to request item $endpointDescription")
             CiriumFlightStatusResponseFailure(t)
         }
   }
@@ -157,10 +159,10 @@ object Cirium {
             .unfoldAsync((startUrl, List[String]())) { case (url, lastStatusUrls) =>
               client.forwards(url, step).map {
                 case CiriumItemListResponse(items) if items.isEmpty =>
-                  log.info(s"No records to fetch from $url")
+                  log.info(s"[Feed][start] No records to fetch from $url")
                   Option((url, lastStatusUrls), (url, lastStatusUrls))
                 case CiriumItemListResponse(newStatusUrls) =>
-                  log.info(s"${newStatusUrls.size} records to fetch from $url")
+                  log.info(s"[Feed][start] ${newStatusUrls.size} records to fetch from $url")
                   Option((newStatusUrls.last, newStatusUrls), (url, lastStatusUrls))
               }
             }
@@ -218,19 +220,23 @@ case class BackwardsStrategyImpl(
           CiriumMessageFormat.dateFromUri(firstItem).toOption match {
             case Some(dateTime) =>
               if (dateTime.getMillis <= targetTime.getMillis) {
-                log.info(s"Reached back to ${dateTime.toDateTimeISO}. Will start processing forwards now")
+                log.info(
+                  s"[BackwardsStrategyImpl][backwardsFrom] Reached back to ${dateTime.toDateTimeISO}. Will start processing forwards now"
+                )
                 Future.successful(firstItem)
               } else {
-                log.info(s"Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}")
+                log.info(
+                  s"[BackwardsStrategyImpl][backwardsFrom] Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}"
+                )
                 backwardsFrom(firstItem)
               }
             case None =>
-              log.error(s"Failed to extract the date from $firstItem")
+              log.error(s"[BackwardsStrategyImpl][backwardsFrom] Failed to extract the date from $firstItem")
               metricsCollector.errorCounterMetric("backUntil-dateFromFirstItem")
               Future.failed(new Exception(s"Failed to extract the date from $firstItem"))
           }
         case None =>
-          log.error("Failed to backfill: Cirium returned no previous feed items")
+          log.error("[BackwardsStrategyImpl][backwardsFrom] Failed to backfill: Cirium returned no previous feed items")
           metricsCollector.errorCounterMetric("backUntil-emptyItemList")
           Future.failed(new Exception("Failed to backfill: Cirium returned no previous feed items"))
       }
