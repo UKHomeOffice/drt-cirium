@@ -26,6 +26,20 @@ object AppConfig {
 
   val ciriumAppEntryPoint: String = config.getString("cirium-feed.entry-point")
 
+  val ciriumUseSkyApi: Boolean = config.getBoolean("cirium-feed.use-sky-api")
+
+  val ciriumSkyApiToken: String = config.getString("cirium-feed.sky-api-token")
+
+  val ciriumSkyApiBaseUrl: String = config.getString("cirium-feed.sky-api-base-url")
+
+  def validateCiriumFeedConfig(): Unit =
+    if (ciriumUseSkyApi)
+      require(ciriumSkyApiToken.trim.nonEmpty, "CIRIUM_SKY_API_TOKEN must be configured when CIRIUM_USE_SKY_API=true")
+    else {
+      require(ciriumAppId.trim.nonEmpty, "CIRIUM_APP_ID must be configured when CIRIUM_USE_SKY_API=false")
+      require(ciriumAppKey.trim.nonEmpty, "CIRIUM_APP_KEY must be configured when CIRIUM_USE_SKY_API=false")
+    }
+
   val statsdHost: String = config.getString("statsd.host")
 
   val statsdPort: Int = config.getInt("statsd.port")

@@ -50,7 +50,7 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
     case ts: CiriumTrackableStatus =>
       if (!isReady && ts.isInSync()) {
         isReady = true
-        log.info(s"Finished cirium backlog after $upTimeSeconds seconds.")
+        log.info(s"[CiriumFlightStatusRouterActor][receive] Finished Cirium backlog after $upTimeSeconds seconds.")
       }
 
       lastMessage = Option(ts)
@@ -59,10 +59,10 @@ class CiriumFlightStatusRouterActor(portActors: Map[String, ActorRef]) extends A
       portActors.get(portCodeForUpdate).foreach(_ ! ts)
 
     case Failure(t) =>
-      log.error(s"Got a failure", t)
+      log.error(s"[CiriumFlightStatusRouterActor][receive] Got a failure", t)
 
     case other =>
-      log.error(s"Got this unexpected message ${other.getClass}")
+      log.error(s"[CiriumFlightStatusRouterActor][receive] Got this unexpected message ${other.getClass}")
   }
 
 }

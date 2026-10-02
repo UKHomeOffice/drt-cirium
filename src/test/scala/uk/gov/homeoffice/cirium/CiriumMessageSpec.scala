@@ -70,6 +70,18 @@ class CiriumMessageSpec extends Specification {
     result.isInstanceOf[Failure[DateTime]]
   }
 
+  "Given a bare Sky feed item ID I should be able to determine its timestamp" >> {
+    val itemId = "2026/09/29/12/30/00/123/skyItem"
+
+    CiriumMessageFormat.dateFromUri(itemId) must beSuccessfulTry(new DateTime(2026, 9, 29, 12, 30, 0))
+  }
+
+  "Given an unrelated URL containing six numeric segments it should not be interpreted as a feed timestamp" >> {
+    val uri = "https://example.com/report/2026/09/29/12/30/00"
+
+    CiriumMessageFormat.dateFromUri(uri) must beFailedTry
+  }
+
   "Given a Cirium message that was issued within the threshold limit of the processing time it should be shown as in sync" >> {
 
     val uri = "https://something.something.endpoint/rest/v2/json/2020/02/12/12/32/17/751/hash"

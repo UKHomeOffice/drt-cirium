@@ -88,12 +88,6 @@ object JsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val ciriumAppHealthSummaryJsonFormat: RootJsonFormat[CiriumAppHealthSummary] =
     jsonFormat2(CiriumAppHealthSummary)
 
-  implicit val ciriumScheduledFlightsJsonFormats: RootJsonFormat[CiriumScheduledFlights] =
-    jsonFormat6(CiriumScheduledFlights)
-  implicit val ciriumScheduledResponseJsonFormats: RootJsonFormat[CiriumScheduledResponse] =
-    jsonFormat1(CiriumScheduledResponse)
-  implicit val ciriumScheduledArrivalRequestJsonFormats: RootJsonFormat[CiriumScheduledFlightRequest] =
-    jsonFormat5(CiriumScheduledFlightRequest)
 }
 
 object CiriumDateProtocol extends DefaultJsonProtocol {

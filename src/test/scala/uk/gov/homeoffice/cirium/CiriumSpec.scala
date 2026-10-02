@@ -10,7 +10,7 @@ import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategy, Cirium }
+import uk.gov.homeoffice.cirium.services.feed.{ BackwardsStrategy, Cirium, LegacyCiriumClient }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
@@ -33,7 +33,7 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
   "I should be able to connect to the feed and see what happens" >> {
     skipped("connectivity tester")
 
-    val client = new Cirium.ProdClient(
+    val client = new LegacyCiriumClient(
       sys.env("CIRIUM_APP_ID"),
       sys.env("CIRIUM_APP_KEY"),
       sys.env("CIRIUM_APP_ENTRY_POINT"),
@@ -473,8 +473,8 @@ class CiriumSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.em
 class MockClient(mockResponse: String, metricsCollector: MetricsCollector)(implicit
     system: ActorSystem,
     executionContext: ExecutionContext
-) extends Cirium.Client("", "", "", metricsCollector) {
-  def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+) extends LegacyCiriumClient("", "", "", metricsCollector) {
+  override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
     Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, mockResponse)))
   }
 }

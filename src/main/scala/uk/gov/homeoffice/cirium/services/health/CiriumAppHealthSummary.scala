@@ -66,7 +66,7 @@ case class AppHealthCheck(
 
       if (!isHealthy)
         log.warn(
-          s"Not healthy. Still catching up: $appIsStillCatchingUp. Within health thresholds: $withinHealthThresholds"
+          s"[AppHealthCheck][isHealthy] Not healthy. Still catching up: $appIsStillCatchingUp. Within health thresholds: $withinHealthThresholds"
         )
 
       isHealthy
@@ -82,29 +82,35 @@ case class AppHealthCheck(
       case (Some(latestAvailableMessage), Some(latestProcessedMessage)) =>
         val latency = latestAvailableMessage.getMillis - latestProcessedMessage
         if (latency < acceptableMessageLatency.toMillis) {
-          log.info(s"Current cirium latency ${latency / 1000} seconds - within allowable threshold")
+          log.info(
+            s"[AppHealthCheck][isWithinHealthThresholds] Current Cirium latency ${latency / 1000} seconds - within allowable threshold"
+          )
           true
         } else {
           metricsCollector.errorCounterMetric(s"isWithinHealthThresholds-outsideAcceptableMessageLatency")
-          log.error(s"Current cirium latency ${latency / 1000} seconds - outside allowable threshold")
+          log.error(
+            s"[AppHealthCheck][isWithinHealthThresholds] Current Cirium latency ${latency / 1000} seconds - outside allowable threshold"
+          )
           false
         }
       case (None, Some(latestProcessedMessage)) =>
         val millisSinceContact = now() - latestProcessedMessage
         if (millisSinceContact < acceptableLostConnectivityDuration.toMillis) {
           log.warn(
-            s"Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - within allowable threshold"
+            s"[AppHealthCheck][isWithinHealthThresholds] Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - within allowable threshold"
           )
           true
         } else {
           metricsCollector.errorCounterMetric(s"isWithinHealthThresholds-outsideAcceptableLostConnectivityDuration")
           log.error(
-            s"Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - outside allowable threshold"
+            s"[AppHealthCheck][isWithinHealthThresholds] Cirium has been unresponsive for ${millisSinceContact / 1000} seconds - outside allowable threshold"
           )
           false
         }
       case _ =>
-        log.error(s"No messages processed. App Ready: ${appHealthSummary.feedHealth.isReady}")
+        log.error(
+          s"[AppHealthCheck][isWithinHealthThresholds] No messages processed. App Ready: ${appHealthSummary.feedHealth.isReady}"
+        )
         false
     }
   }
@@ -118,7 +124,7 @@ case class AppHealthCheck(
       .recover {
         case e: Throwable =>
           metricsCollector.errorCounterMetric("latestMessageDateTime")
-          log.error(s"Failed to connect to cirium: ${e.getMessage}")
+          log.error(s"[AppHealthCheck][latestMessageDateTime] Failed to connect to Cirium: ${e.getMessage}")
           None
       }
 }
