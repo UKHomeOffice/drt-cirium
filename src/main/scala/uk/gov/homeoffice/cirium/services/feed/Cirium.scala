@@ -2,7 +2,6 @@ package uk.gov.homeoffice.cirium.services.feed
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
@@ -16,7 +15,7 @@ import uk.gov.homeoffice.cirium.services.entities._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.matching.Regex
+import scala.util.Try
 
 trait CiriumClientLike {
   def initialRequest(): Future[CiriumInitialResponse]
@@ -27,7 +26,7 @@ trait CiriumClientLike {
 
   def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse]
 
-  def sendReceive(uri: Uri): Future[HttpResponse]
+  def sendReceive(request: HttpRequest): Future[HttpResponse]
 
   def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponse]
 
@@ -36,11 +35,17 @@ trait CiriumClientLike {
 object Cirium {
   private val log = LoggerFactory.getLogger(getClass)
 
-  abstract case class Client(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(
+  abstract class Client(metricsCollector: MetricsCollector)(
       implicit
       system: ActorSystem,
       executionContext: ExecutionContext
   ) extends CiriumClientLike {
+    protected def latestFeedEndpoint: String
+    protected def previousFeedEndpoint(item: String, batchSize: Int): String
+    protected def nextFeedEndpoint(item: String, batchSize: Int): String
+    protected def feedItemEndpoint(item: String): String
+    protected def request(endpoint: String): HttpRequest
+    protected def requestFailureMetric: String
 
     implicit val materializer: Materializer = Materializer.createMaterializer(system)
 
@@ -51,7 +56,7 @@ object Cirium {
     val flightStatusMaxRetries: Option[Int] = Option(15)
 
     override def initialRequest(): Future[CiriumInitialResponse] = {
-      makeRequest(entryPoint, initialRequestMaxRetries).flatMap { res =>
+      makeRequest(latestFeedEndpoint, initialRequestMaxRetries).flatMap { res =>
         Unmarshal[HttpResponse](res).to[CiriumInitialResponse].recoverWith {
           case e =>
             log.error(s"Error while parsing initialRequest", e)
@@ -61,10 +66,10 @@ object Cirium {
     }
 
     override def backwards(latestItemLocation: String, step: Int): Future[CiriumItemListResponse] =
-      fetchItemList(latestItemLocation + s"/previous/$step")
+      fetchItemList(previousFeedEndpoint(latestItemLocation, step))
 
     override def forwards(latestItemLocation: String, step: Int = 1000): Future[CiriumItemListResponse] =
-      fetchItemList(latestItemLocation + s"/next/$step")
+      fetchItemList(nextFeedEndpoint(latestItemLocation, step))
 
     private def fetchItemList(uri: String): Future[CiriumItemListResponse] =
       makeRequest(uri, itemListMaxRetries)
@@ -76,25 +81,41 @@ object Cirium {
             CiriumItemListResponse.empty
         }
 
-    override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = {
-      val uri = Uri(endpoint).withRawQueryString(s"appId=$appId&appKey=$appKey")
-      Retry.retry(
-        sendReceive(uri)
-          .flatMap { response =>
-            response.status match {
-              case StatusCodes.OK => Future.successful(response)
-              case status         =>
-                log.warn(s"Status of http response is not 200 Ok $status")
-                Future.failed(new Exception(s"$status status while cirium request"))
-            }
-          },
-        Retry.fibonacci(180).map(_.second),
-        maybeMaxRetries,
-        5.seconds
-      )
+    private def safeEndpoint(endpoint: String): String = Uri(endpoint).withQuery(Uri.Query.Empty).toString()
+
+    private def recordRequestFailure(endpoint: String, status: StatusCode): Unit = {
+      log.warn(s"Cirium request failed: endpoint=${safeEndpoint(endpoint)} status=$status")
+      metricsCollector.errorCounterMetric(s"$requestFailureMetric-${status.intValue()}")
     }
 
+    override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] =
+      Try(request(endpoint)).fold(
+        Future.failed,
+        request =>
+          Retry.retry(
+            sendReceive(request)
+              .flatMap { response =>
+                response.status match {
+                  case StatusCodes.OK => Future.successful(response)
+                  case status         =>
+                    recordRequestFailure(endpoint, status)
+                    response.discardEntityBytes()
+                    Future.failed(new Exception(s"$status status while cirium request"))
+                }
+              },
+            Retry.fibonacci(180).map(_.second),
+            maybeMaxRetries,
+            5.seconds
+          )
+      )
+
     def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponse] =
+      Try(feedItemEndpoint(endpoint)).fold(Future.failed, fetchFlightStatusFrom(_, endpoint))
+
+    private def fetchFlightStatusFrom(
+        endpoint: String,
+        endpointDescription: String
+    ): Future[CiriumFlightStatusResponse] =
       makeRequest(endpoint, flightStatusMaxRetries)
         .flatMap { res =>
           res.status match {
@@ -102,7 +123,9 @@ object Cirium {
               Unmarshal[HttpResponse](res)
                 .to[CiriumFlightStatusResponseSuccess].recover {
                   case error: Throwable =>
-                    log.error(s"Error parsing CiriumFlightStatusResponseSuccess from $endpoint: ${error.getMessage}")
+                    log.error(
+                      s"Error parsing CiriumFlightStatusResponseSuccess from $endpointDescription: ${error.getMessage}"
+                    )
                     metricsCollector.errorCounterMetric("requestItem-CiriumFlightStatusResponse")
                     CiriumFlightStatusResponseFailure(error)
                 }
@@ -113,16 +136,9 @@ object Cirium {
         }
         .recover {
           case t =>
-            log.error(s"Failed to request item $endpoint")
+            log.error(s"Failed to request item $endpointDescription")
             CiriumFlightStatusResponseFailure(t)
         }
-  }
-
-  class ProdClient(appId: String, appKey: String, entryPoint: String, metricsCollector: MetricsCollector)(implicit
-      system: ActorSystem,
-      executionContext: ExecutionContext
-  ) extends Client(appId, appKey, entryPoint, metricsCollector) {
-    override def sendReceive(uri: Uri): Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, uri))
   }
 
   case class Feed(
@@ -194,26 +210,29 @@ case class BackwardsStrategyImpl(
     metricsCollector: MetricsCollector
 )(implicit executionContext: ExecutionContext) extends BackwardsStrategy {
   private val log = LoggerFactory.getLogger(getClass)
-  private val dateFromUrlRegex: Regex =
-    ".+/json/([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{2}/[0-9]{3,4}/.+".r
 
   def backwardsFrom(startItem: String): Future[String] = {
     client.backwards(startItem, 1000).flatMap { c =>
-      val firstItem = c.items.head
-      firstItem match {
-        case dateFromUrlRegex(y, m, d, h, min) =>
-          val dateTime = new DateTime(y.toInt, m.toInt, d.toInt, h.toInt, min.toInt)
-          if (dateTime.getMillis <= targetTime.getMillis) {
-            log.info(s"Reached back to ${dateTime.toDateTimeISO}. Will start processing forwards now")
-            Future.successful(firstItem)
-          } else {
-            log.info(s"Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}")
-            backwardsFrom(firstItem)
+      c.items.headOption match {
+        case Some(firstItem) =>
+          CiriumMessageFormat.dateFromUri(firstItem).toOption match {
+            case Some(dateTime) =>
+              if (dateTime.getMillis <= targetTime.getMillis) {
+                log.info(s"Reached back to ${dateTime.toDateTimeISO}. Will start processing forwards now")
+                Future.successful(firstItem)
+              } else {
+                log.info(s"Reached back to ${dateTime.toDateTimeISO}. Aiming for ${targetTime.toDateTimeISO}")
+                backwardsFrom(firstItem)
+              }
+            case None =>
+              log.error(s"Failed to extract the date from $firstItem")
+              metricsCollector.errorCounterMetric("backUntil-dateFromFirstItem")
+              Future.failed(new Exception(s"Failed to extract the date from $firstItem"))
           }
-        case _ =>
-          log.error(s"Failed to extract the date from $firstItem")
-          metricsCollector.errorCounterMetric("backUntil-dateFromFirstItem")
-          Future.failed(new Exception(s"Failed to extract the date from $firstItem"))
+        case None =>
+          log.error("Failed to backfill: Cirium returned no previous feed items")
+          metricsCollector.errorCounterMetric("backUntil-emptyItemList")
+          Future.failed(new Exception("Failed to backfill: Cirium returned no previous feed items"))
       }
     }
   }

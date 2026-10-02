@@ -172,14 +172,13 @@ case class CiriumTrackableStatus(status: CiriumFlightStatus, messageUri: String,
 }
 
 object CiriumMessageFormat {
+  private val feedItemPath =
+    "(?:.*/)?([0-9]{4})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/([0-9]{2})/[0-9]{1,4}/[^/]+".r
 
   def dateFromUri(uri: String): Try[DateTime] = Try {
-
-    val dateBits = uri.split("json/").last.split("/").toList
-
-    dateBits match {
-      case year :: month :: day :: hour :: minute :: seconds :: _ =>
-        new DateTime(year.toInt, month.toInt, day.toInt, hour.toInt, minute.toInt, seconds.toInt)
+    Uri(uri).path.toString() match {
+      case feedItemPath(year, month, day, hour, minute, second) =>
+        new DateTime(year.toInt, month.toInt, day.toInt, hour.toInt, minute.toInt, second.toInt)
       case _ => throw new Exception(s"Url $uri is not parsable as a date-time.")
     }
   }
