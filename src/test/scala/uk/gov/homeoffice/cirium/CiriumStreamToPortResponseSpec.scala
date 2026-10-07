@@ -14,7 +14,7 @@ import uk.gov.homeoffice.cirium.services.entities.{
   CiriumStatusSchedule,
   CiriumTrackableStatus
 }
-import uk.gov.homeoffice.cirium.services.feed.Cirium
+import uk.gov.homeoffice.cirium.services.feed.{ Cirium, LegacyCiriumClient, SkyCiriumClient }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
@@ -30,7 +30,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   class MockClient(startUri: String, scheduleType: CiriumStatusSchedule)(implicit
       system: ActorSystem,
       executionContext: ExecutionContext
-  ) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+  ) extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
     val previousRegex: Regex = "https://current/previous/.+".r
@@ -39,9 +39,9 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
 
-      val res = endpoint.toString() match {
+      val res = request.uri.toString() match {
         case latestRegex() =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
         case previousRegex() =>
@@ -66,16 +66,50 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     }
   }
 
+  class SkyMockClient(implicit system: ActorSystem, executionContext: ExecutionContext)
+      extends SkyCiriumClient("sky-token", "https://sky.example", MockMetricsCollector) {
+    var requests: List[HttpRequest] = List.empty
+
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
+      requests = requests :+ request
+
+      request.uri.path.toString() match {
+        case "/v1/flights/status/feed/latest" =>
+          Future.successful(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, skyInitialResponse)))
+        case path if path == s"/v1/flights/status/feed/$skyStartItem/next/2" =>
+          Future.successful(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, skyForwardResponse)))
+        case path if path == s"/v1/flights/status/feed/$skyFreightItem/next/2" =>
+          Future.successful(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, skyEmptyResponse)))
+        case path if path == s"/v1/flights/status/feed/$skyPassengerItem" =>
+          Future.successful(HttpResponse(
+            200,
+            Nil,
+            HttpEntity(ContentTypes.`application/json`, skyPassengerFlightStatusResponse)
+          ))
+        case path if path == s"/v1/flights/status/feed/$skyFreightItem" =>
+          Future.successful(HttpResponse(
+            200,
+            Nil,
+            HttpEntity(
+              ContentTypes.`application/json`,
+              flightStatusResponse("FRT", CiriumStatusSchedule("F"), skyFreightItem)
+            )
+          ))
+        case path => Future.failed(new Exception(s"Unexpected Sky request: $path"))
+      }
+    }
+  }
+
   class MockClientWith500Response(startUri: String)(implicit system: ActorSystem, executionContext: ExecutionContext)
-      extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+      extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
     override val flightStatusMaxRetries: Option[Int] = Option(0)
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] =
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] =
       Future(HttpResponse(500, Nil, HttpEntity(ContentTypes.`application/json`, "Boom")))
   }
 
   class MockClientWithoutSchedule(startUri: String)(implicit system: ActorSystem, executionContext: ExecutionContext)
-      extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+      extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
     val previousRegex: Regex = "https://current/previous/.+".r
@@ -84,8 +118,8 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
-      val res = endpoint.toString() match {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
+      val res = request.uri.toString() match {
         case latestRegex() =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
         case previousRegex() =>
@@ -113,7 +147,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   class MockClientWithoutFlightTypeInSchedule(startUri: String)(implicit
       system: ActorSystem,
       executionContext: ExecutionContext
-  ) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+  ) extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
     val previousRegex: Regex = "https://current/previous/.+".r
@@ -122,8 +156,8 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
-      val res = endpoint.toString() match {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
+      val res = request.uri.toString() match {
         case latestRegex() =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
         case previousRegex() =>
@@ -154,7 +188,7 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   class MockClientWithoutRequestObjectInResponse(startUri: String)(implicit
       system: ActorSystem,
       executionContext: ExecutionContext
-  ) extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+  ) extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val latestRegex: Regex = "https://latest.+".r
     val previousRegex: Regex = "https://current/previous/.+".r
@@ -164,9 +198,9 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
     val forward5Regex: Regex = "https://item/5/.+".r
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = {
 
-      val res = endpoint.toString() match {
+      val res = request.uri.toString() match {
         case latestRegex() =>
           Future(HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse)))
         case previousRegex() =>
@@ -201,15 +235,15 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   class MockClientWithFailures(startUri: String)(implicit system: ActorSystem, executionContext: ExecutionContext)
-      extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+      extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
     var calls = 0
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = Future {
 
-      endpoint.toString() match {
+      request.uri.toString() match {
         case "https://latest?appId=&appKey=" =>
           HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse))
         case "https://current/previous/2?appId=&appKey=" =>
@@ -237,13 +271,13 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
   }
 
   class MockClientWithInvalidJson(startUri: String)(implicit system: ActorSystem, executionContext: ExecutionContext)
-      extends Cirium.Client("", "", startUri, MockMetricsCollector) {
+      extends LegacyCiriumClient("", "", startUri, MockMetricsCollector) {
 
     val itemUriRegEx: Regex = "https://item/(\\d).+".r
 
-    def sendReceive(endpoint: Uri): Future[HttpResponse] = Future {
+    override def sendReceive(request: HttpRequest): Future[HttpResponse] = Future {
 
-      endpoint.toString() match {
+      request.uri.toString() match {
         case "https://latest?appId=&appKey=" =>
           HttpResponse(200, Nil, HttpEntity(ContentTypes.`application/json`, initialResponse))
         case "https://current/previous/2?appId=&appKey=" =>
@@ -291,6 +325,30 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       case CiriumTrackableStatus(_, _, _) =>
         false
     }
+
+    success
+  }
+
+  "Given Sky feed responses, shared feed processing should retain passenger flights and use Sky authentication" >> {
+    val client = new SkyMockClient
+    val feed =
+      Cirium.Feed(client, pollInterval = 100.millis, MockBackwardsStrategy(skyStartItem), MockMetricsCollector)
+    val received = Await.result(feed.start(2).flatMap(_.take(1).runWith(Sink.head)), 5.seconds)
+    received.status.carrierFsCode must_== "SKY"
+    received.messageUri must_== s"https://item/$skyPassengerItem"
+    received.status.arrivalAirportFsCode must_== "ABZ"
+    received.status.airportResources.flatMap(_.arrivalTerminal) must beSome("T1")
+
+    val requestPaths = client.requests.map(_.uri.path.toString())
+    requestPaths.contains("/v1/flights/status/feed/latest") must beTrue
+    requestPaths.contains(s"/v1/flights/status/feed/$skyStartItem/next/2") must beTrue
+    requestPaths.contains(s"/v1/flights/status/feed/$skyPassengerItem") must beTrue
+    requestPaths.contains(s"/v1/flights/status/feed/$skyFreightItem") must beTrue
+    client.requests.forall { request =>
+      request.uri.query().toString().isEmpty &&
+      request.headers.find(_.is("accept")).exists(_.value() == "application/json") &&
+      request.headers.find(_.is("authorization")).exists(_.value() == "sky-token")
+    } must beTrue
 
     success
   }
@@ -434,6 +492,27 @@ class CiriumStreamToPortResponseSpec extends TestKit(ActorSystem("testActorSyste
       |    "item": "https://current"
       |}
     """.stripMargin
+
+  val skyStartItem = "2026/09/29/10/00/00/100/start"
+  val skyPassengerItem = "2026/09/29/10/01/00/100/passenger"
+  val skyFreightItem = "2026/09/29/10/02/00/100/freight"
+
+  val skyInitialResponse: String =
+    s"""
+       |{
+       |  "request": { "endpoint": "latest", "url": "https://sky.example/v1/flights/status/feed/latest" },
+       |  "item": "$skyStartItem"
+       |}
+       |""".stripMargin
+
+  val skyForwardResponse: String = s"""{"items":["$skyPassengerItem","$skyFreightItem"]}"""
+
+  val skyEmptyResponse: String = """{"items":[]}"""
+
+  val skyPassengerFlightStatusResponse: String =
+    flightStatusResponse("SKY", CiriumStatusSchedule.passengerFlight, skyPassengerItem)
+      .replace("\"arrivalAirportFsCode\": \"TST\"", "\"arrivalAirportFsCode\": \"ABZ\"")
+      .replace("\"arrivalTerminal\": \"A\"", "\"arrivalTerminal\": null")
 
   val back1WithoutRequestObjectHop: String =
     """

@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.cirium
 
-import org.apache.pekko.http.scaladsl.model.{ HttpResponse, Uri }
+import org.apache.pekko.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import uk.gov.homeoffice.cirium.services.entities.{
   CiriumFlightStatusResponseSuccess,
   CiriumInitialResponse,
@@ -24,7 +24,7 @@ case class MockClientWithInitialResponseOnly(firstItemLink: String)(implicit ec:
 
   override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = ???
 
-  override def sendReceive(uri: Uri): Future[HttpResponse] = ???
+  override def sendReceive(request: HttpRequest): Future[HttpResponse] = ???
 
   override def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
 }
@@ -39,7 +39,7 @@ case class MockClientWithFailure(firstItemLink: String)(implicit ec: ExecutionCo
 
   override def makeRequest(endpoint: String, maybeMaxRetries: Option[Int]): Future[HttpResponse] = ???
 
-  override def sendReceive(uri: Uri): Future[HttpResponse] = ???
+  override def sendReceive(request: HttpRequest): Future[HttpResponse] = ???
 
   override def fetchFlightStatus(endpoint: String): Future[CiriumFlightStatusResponseSuccess] = ???
 }

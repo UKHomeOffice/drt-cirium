@@ -61,12 +61,12 @@ class CiriumPortStatusActor(
 
     case GetStatuses =>
       val replyTo = sender()
-      log.info(s"Sending ${trackableStatuses.size} flight statuses")
+      log.info(s"[CiriumPortStatusActor][receive] Sending ${trackableStatuses.size} flight statuses")
       replyTo ! trackableStatuses.values.map(_.status).toList
 
     case GetTrackableStatuses =>
       val replyTo = sender()
-      log.info(s"Sending ${trackableStatuses.size} flight statuses")
+      log.info(s"[CiriumPortStatusActor][receive] Sending ${trackableStatuses.size} flight statuses")
       replyTo ! trackableStatuses.values.toList
 
     case GetPortFeedHealthSummary =>
@@ -106,7 +106,7 @@ class CiriumPortStatusActor(
 
       if (removals.totalRemoved > 0) {
         log.info(
-          s"Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining"
+          s"[CiriumPortStatusActor][receive] Removing ${removals.totalRemoved} expired flights. ${removals.remainingAfterRemoval} flights remaining"
         )
         removalDetails = Option(removals)
         trackableStatuses --= forRemoval
@@ -117,9 +117,9 @@ class CiriumPortStatusActor(
       latestStatus = Option(s)
 
     case Failure(t) =>
-      log.error(s"Got a failure", t)
+      log.error(s"[CiriumPortStatusActor][receive] Got a failure", t)
 
     case other =>
-      log.error(s"Got this unexpected message $other")
+      log.error(s"[CiriumPortStatusActor][receive] Got unexpected message: $other")
   }
 }
