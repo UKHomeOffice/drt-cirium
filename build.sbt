@@ -15,7 +15,6 @@ lazy val root = (project in file("."))
       "Artifactory Realm libs release local" at
         "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/"
     ),
-    dockerBaseImage := "openjdk:11-jre-slim-buster",
     libraryDependencies ++= AppDependencies.allDependencies,
     addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt")
   )
