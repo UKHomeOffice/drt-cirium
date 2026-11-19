@@ -1,8 +1,8 @@
 import sbt.*
 
 object AppDependencies {
-  private val pekkoVersion = "1.4.0"
-  private val pekkoHttpVersion = "1.3.0"
+  private val pekkoVersion = "1.7.1"
+  private val pekkoHttpVersion = "1.4.2"
   private val logbackContribVersion = "0.1.5"
   private val scalatestVersion = "3.2.20"
 
@@ -13,12 +13,11 @@ object AppDependencies {
     "org.apache.pekko"          %% "pekko-stream"          % pekkoVersion,
     "org.apache.pekko"          %% "pekko-slf4j"           % pekkoVersion,
     "org.apache.pekko"          %% "pekko-pki"             % pekkoVersion,
-    "ch.qos.logback"             % "logback-classic"       % "1.5.34",
-    "joda-time"                  % "joda-time"             % "2.14.2",
+    "ch.qos.logback"             % "logback-classic"       % "1.6.7",
+    "joda-time"                  % "joda-time"             % "2.15.1",
     "ch.qos.logback.contrib"     % "logback-json-classic"  % logbackContribVersion,
     "ch.qos.logback.contrib"     % "logback-jackson"       % logbackContribVersion,
-    "com.fasterxml.jackson.core" % "jackson-databind"      % "2.20.1", // for compatibility with deps in Drtv2
-    "org.codehaus.janino"        % "janino"                % "3.1.12"
+    "com.fasterxml.jackson.core" % "jackson-databind"      % "2.21.8" // for compatibility with deps in Drtv2
   )
 
   val testDependencies: Seq[ModuleID] = Seq(
